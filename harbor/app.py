@@ -1,39 +1,48 @@
 from flask import Flask
 
-from core.registry import Registry
-from proxy.flask_proxy import FlaskProxyBackend
-from proxy.caddy import CaddyBackend
-from render.routes import render_routes
-
-import config
+from . import config
+from .core.registry import Registry
+from .proxy.factory import create_backend
+from .render.routes import render_routes
 
 
-app = Flask(__name__)
+def create_app():
 
-registry = Registry()
+    app = Flask(__name__)
+
+    registry = Registry()
+
+    backend = create_backend(app)
+
+    def reload_proxy():
+
+        services = registry.all_services()
+
+        if config.PROXY_BACKEND == "flask":
+
+            backend.apply(services)
+
+        else:
+
+            routes = render_routes(services)
+            backend.apply(routes)
+
+    # attach runtime objects
+    app.registry = registry
+    app.backend = backend
+    app.reload_proxy = reload_proxy
+
+    # initial load
+    reload_proxy()
+
+    return app
 
 
-def create_backend():
+def main():
 
-    if config.PROXY_BACKEND == "flask":
-        return FlaskProxyBackend(app)
+    app = create_app()
 
-    if config.PROXY_BACKEND == "caddy":
-        return CaddyBackend(config.CADDY_ADMIN)
-
-
-backend = create_backend()
-
-
-def reload_proxy():
-
-    services = registry.all_services()
-
-    if config.PROXY_BACKEND == "flask":
-
-        backend.apply(services)
-
-    else:
-
-        routes = render_routes(services)
-        backend.apply(routes)
+    app.run(
+        host=config.HOST,
+        port=config.PORT
+    )

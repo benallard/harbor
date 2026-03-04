@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "harbor-proxy"
+version = "0.1.0"
+description = "Dynamic reverse proxy controller with TTL-based service registry"
+authors = ["Ben"]
+readme = "README.md"
+packages = [{ include = "harbor" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0"
+requests = "^2.32"
+pyyaml = "^6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-flask = "^1.3"
+black = "^24.0"
+ruff = "^0.4"
+
+[tool.poetry.scripts]
+harbor = "harbor.app:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
