@@ -6,15 +6,12 @@ from typing import List, Optional
 class Service:
     id: str
     prefix: str
-    kind: str
+    kind: str  # "proxy" or "static"
     upstreams: Optional[List[str]] = None
     directory: Optional[str] = None
-
-    name: Optional[str] = None
-    icon: Optional[str] = None
-    description: Optional[str] = None
-
-    source: str = "file"  # file | dynamic
+    source: str = "file"  # "file" vs "dynamic"
+    public: bool = True  # included in /catalog
+    public_paths: Optional[List[str]] = None  # only these paths are proxied publicly
 
 
 @dataclass

@@ -5,8 +5,8 @@ from .models import Service, Lease
 
 class Registry:
 
-    def __init__(self):
-        self.static = {}
+    def __init__(self, static_services):
+        self.static = static_services
         self.dynamic = {}
         self.leases = {}
 

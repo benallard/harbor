@@ -19,24 +19,33 @@ class CaddyBackend(ProxyBackend):
         requests.post(f"{self.admin_url}/config", json=config)
 
 
-def render_routes(services):
-
+def render_routes(services: list[Service]):
     routes = []
 
     for s in services:
-
         if s.kind == "proxy":
+            # If public_paths is set, use it; otherwise, proxy everything under prefix
+            paths = s.public_paths or [f"{s.prefix}*"]
 
-            routes.append(
-                {
-                    "match": [{"path": [f"{s.prefix}*"]}],
-                    "handle": [
-                        {
-                            "handler": "reverse_proxy",
-                            "upstreams": [{"dial": u} for u in s.upstreams],
-                        }
-                    ],
-                }
-            )
+            route = {
+                "match": [{"path": paths}],
+                "handle": [
+                    {
+                        "handler": "reverse_proxy",
+                        "upstreams": [
+                            {"dial": upstream} for upstream in (s.upstreams or [])
+                        ],
+                    }
+                ],
+            }
+
+            routes.append(route)
+
+        elif s.kind == "static":
+            route = {
+                "match": [{"path": [f"{s.prefix}*"]}],
+                "handle": [{"handler": "file_server", "root": s.directory}],
+            }
+            routes.append(route)
 
     return routes
