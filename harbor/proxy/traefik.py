@@ -10,12 +10,7 @@ class TraefikBackend(ProxyBackend):
 
     def apply(self, routes):
 
-        data = {
-            "http": {
-                "routers": {},
-                "services": {}
-            }
-        }
+        data = {"http": {"routers": {}, "services": {}}}
 
         # convert routes to traefik objects here
 

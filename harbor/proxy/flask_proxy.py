@@ -21,12 +21,15 @@ class FlaskProxyBackend(ProxyBackend):
 
     def _install_gateway(self):
 
-        @self.app.route("/", defaults={"path": ""}, methods=[
-            "GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"
-        ])
-        @self.app.route("/<path:path>", methods=[
-            "GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"
-        ])
+        @self.app.route(
+            "/",
+            defaults={"path": ""},
+            methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+        )
+        @self.app.route(
+            "/<path:path>",
+            methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+        )
         def gateway(path):
 
             full_path = "/" + path
@@ -64,32 +67,24 @@ class FlaskProxyBackend(ProxyBackend):
             data=request.get_data(),
             cookies=request.cookies,
             stream=True,
-            allow_redirects=False
+            allow_redirects=False,
         )
 
         excluded = [
             "content-encoding",
             "content-length",
             "transfer-encoding",
-            "connection"
+            "connection",
         ]
 
         headers = [
-            (k, v) for k, v in resp.raw.headers.items()
-            if k.lower() not in excluded
+            (k, v) for k, v in resp.raw.headers.items() if k.lower() not in excluded
         ]
 
-        return Response(
-            resp.content,
-            resp.status_code,
-            headers
-        )
+        return Response(resp.content, resp.status_code, headers)
 
     def _filtered_headers(self):
 
         excluded = ["host", "content-length"]
 
-        return {
-            k: v for k, v in request.headers
-            if k.lower() not in excluded
-        }
+        return {k: v for k, v in request.headers if k.lower() not in excluded}

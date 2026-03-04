@@ -15,10 +15,7 @@ class Registry:
         token = secrets.token_hex(16)
 
         lease = Lease(
-            service_id=service.id,
-            token=token,
-            ttl=ttl,
-            expires_at=time.time() + ttl
+            service_id=service.id, token=token, ttl=ttl, expires_at=time.time() + ttl
         )
 
         self.dynamic[service.id] = service
@@ -43,10 +40,7 @@ class Registry:
 
         now = time.time()
 
-        expired = [
-            sid for sid, lease in self.leases.items()
-            if lease.expires_at < now
-        ]
+        expired = [sid for sid, lease in self.leases.items() if lease.expires_at < now]
 
         for sid in expired:
             self.dynamic.pop(sid, None)

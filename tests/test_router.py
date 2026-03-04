@@ -23,9 +23,7 @@ def test_router_root_match():
 
     router = Router()
 
-    services = [
-        Service(id="root", prefix="/", kind="proxy")
-    ]
+    services = [Service(id="root", prefix="/", kind="proxy")]
 
     router.rebuild(services)
 

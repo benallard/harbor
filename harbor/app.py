@@ -3,7 +3,6 @@ from flask import Flask
 from . import config
 from .core.registry import Registry
 from .proxy.factory import create_backend
-from .render.routes import render_routes
 
 
 def create_app():
@@ -17,15 +16,7 @@ def create_app():
     def reload_proxy():
 
         services = registry.all_services()
-
-        if config.PROXY_BACKEND == "flask":
-
-            backend.apply(services)
-
-        else:
-
-            routes = render_routes(services)
-            backend.apply(routes)
+        backend.apply(services)
 
     # attach runtime objects
     app.registry = registry
@@ -42,7 +33,4 @@ def main():
 
     app = create_app()
 
-    app.run(
-        host=config.HOST,
-        port=config.PORT
-    )
+    app.run(host=config.HOST, port=config.PORT)

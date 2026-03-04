@@ -10,10 +10,7 @@ def app():
     app = create_app()
 
     service = Service(
-        id="test",
-        prefix="/test",
-        kind="proxy",
-        upstreams=["http://httpbin.org"]
+        id="test", prefix="/test", kind="proxy", upstreams=["http://httpbin.org"]
     )
 
     app.backend.apply([service])

@@ -6,11 +6,7 @@ class Router:
     def rebuild(self, services):
 
         # longest prefix first
-        self.routes = sorted(
-            services,
-            key=lambda s: len(s.prefix),
-            reverse=True
-        )
+        self.routes = sorted(services, key=lambda s: len(s.prefix), reverse=True)
 
     def match(self, path):
 
@@ -22,7 +18,7 @@ class Router:
                 return service, ""
 
             if path.startswith(prefix + "/"):
-                subpath = path[len(prefix) + 1:]
+                subpath = path[len(prefix) + 1 :]
                 return service, subpath
 
         return None, None

@@ -1,4 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
+
+from ..core.models import Service
+from ..core import registry
 
 bp = Blueprint("services", __name__)
 
@@ -13,18 +16,15 @@ def create_service():
         prefix=data["prefix"],
         kind=data["type"],
         upstreams=data.get("upstreams"),
-        source="dynamic"
+        source="dynamic",
     )
 
     lease = registry.register_dynamic(service, data.get("ttl", 60))
 
     reload_proxy()
 
-    return {
-        "id": service.id,
-        "lease": lease.token,
-        "ttl": lease.ttl
-    }
+    return {"id": service.id, "lease": lease.token, "ttl": lease.ttl}
+
 
 @bp.post("/service/<id>/renew")
 def renew(id):

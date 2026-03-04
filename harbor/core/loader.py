@@ -19,7 +19,7 @@ def load_services(path):
             directory=data.get("directory"),
             name=data.get("name"),
             icon=data.get("icon"),
-            source="file"
+            source="file",
         )
 
         services[service.id] = service

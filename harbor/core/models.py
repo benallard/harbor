@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import List, Optional
-import time
 
 
 @dataclass
@@ -15,7 +14,7 @@ class Service:
     icon: Optional[str] = None
     description: Optional[str] = None
 
-    source: str = "file"   # file | dynamic
+    source: str = "file"  # file | dynamic
 
 
 @dataclass
