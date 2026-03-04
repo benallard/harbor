@@ -1,5 +1,6 @@
 import requests
 from .base import ProxyBackend
+from ..core.models import Service
 
 
 class CaddyBackend(ProxyBackend):
