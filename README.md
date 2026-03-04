@@ -152,7 +152,6 @@ harbor/
   api/        REST API
   core/       service registry and leases
   proxy/      proxy backends
-  render/     route rendering
 tests/
 ```
 
