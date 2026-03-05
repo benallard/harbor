@@ -1,4 +1,6 @@
 import requests
+import requests_unixsocket
+from typing import List
 from .base import ProxyBackend
 from ..core.models import Service
 
@@ -7,6 +9,10 @@ class CaddyBackend(ProxyBackend):
 
     def __init__(self, admin_url):
         self.admin_url = admin_url
+        if admin_url.startswith("http+unix://"):
+            self.session = requests_unixsocket.Session()
+        else:
+            self.session = requests.Session()
 
     def apply(self, services):
 
@@ -17,10 +23,10 @@ class CaddyBackend(ProxyBackend):
             }
         }
 
-        requests.post(f"{self.admin_url}/config", json=config)
+        self.session.post(f"{self.admin_url}/config", json=config)
 
 
-def render_routes(services: list[Service]):
+def render_routes(services: List[Service]):
     routes = []
 
     for s in services:
