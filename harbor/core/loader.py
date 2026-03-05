@@ -11,16 +11,7 @@ def load_services(path):
 
         data = yaml.safe_load(open(f))
 
-        service = Service(
-            id=data["name"],
-            prefix=data["prefix"],
-            kind=data["type"],
-            upstreams=data.get("upstreams"),
-            directory=data.get("directory"),
-            name=data.get("name"),
-            icon=data.get("icon"),
-            source="file",
-        )
+        service = Service.from_dict(data, "file")
 
         services[service.id] = service
 

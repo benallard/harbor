@@ -67,7 +67,9 @@ def create_app(args):
     reload_proxy()
 
     # Start GC in background thread
-    gc_thread = threading.Thread(target=start_gc, args=(registry, reload_proxy), daemon=True)
+    gc_thread = threading.Thread(
+        target=start_gc, args=(registry, reload_proxy), daemon=True
+    )
     gc_thread.start()
 
     return app

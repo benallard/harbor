@@ -26,3 +26,17 @@ def catalog():
             )
 
     return jsonify(data)
+
+
+@bp.get("/catalog/icon/<service_id>")
+def catalog_icon(service_id: str):
+    """
+    Endpoint to retrieve the icon for a given service.
+    Returns the icon URL or base64 string, or 404 if not found.
+    """
+    services = current_app.registry.all_services()
+    service = next((s for s in services if s.id == service_id), None)
+    if service and getattr(service, "icon", None):
+        return jsonify({"icon": service.icon})
+    # Optionally, return a default icon or 404
+    return jsonify({"icon": None}), 404

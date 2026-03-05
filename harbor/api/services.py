@@ -35,16 +35,7 @@ def create_service():
     data = request.json
     if not data or "id" not in data or "prefix" not in data or "type" not in data:
         return jsonify({"error": "missing required fields"}), 400
-
-    service = Service(
-        id=data["id"],
-        prefix=data["prefix"],
-        kind=data["type"],
-        upstreams=data.get("upstreams"),
-        directory=data.get("directory"),
-        source="dynamic",
-    )
-
+    service = Service.from_dict(data, "dynamic")
     ttl = data.get("ttl", 60)
     lease = current_app.registry.register_dynamic(service, ttl=ttl)
 
