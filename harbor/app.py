@@ -1,9 +1,11 @@
 import argparse
+import threading
 from flask import Flask
 
 from .core.registry import Registry
 from .core.loader import load_services
 from .proxy.factory import create_backend
+from .tasks.gc import start_gc
 
 
 def parse_args():
@@ -63,6 +65,10 @@ def create_app(args):
 
     # initial load
     reload_proxy()
+
+    # Start GC in background thread
+    gc_thread = threading.Thread(target=start_gc, args=(registry, reload_proxy), daemon=True)
+    gc_thread.start()
 
     return app
 
