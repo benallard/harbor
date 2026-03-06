@@ -1,11 +1,11 @@
 import argparse
-import threading
 from flask import Flask
 
 from .core.registry import Registry
 from .core.loader import load_services
 from .proxy.factory import create_backend
-from .tasks.gc import start_gc
+from .tasks.gc import create_gc
+from .api import services, catalog
 
 
 def parse_args():
@@ -44,39 +44,27 @@ def parse_args():
 
 
 def create_app(args):
-
     app = Flask(__name__)
-
     static = load_services(args.static_dir)
-
     registry = Registry(static)
-
     backend = create_backend(app, args.backend, args.caddy_admin)
 
-    def reload_proxy():
+    registry.subscribe(backend.on_event)
+    registry.subscribe(catalog.notify_subscribers)
 
-        services = registry.all_services()
-        backend.apply(services)
+    # Initial load
+    backend.apply(list(registry.static.values()))
 
-    # attach runtime objects
-    app.registry = registry
-    app.backend = backend
-    app.reload_proxy = reload_proxy
-
-    # initial load
-    reload_proxy()
-
-    # Start GC in background thread
-    gc_thread = threading.Thread(
-        target=start_gc, args=(registry, reload_proxy), daemon=True
-    )
+    gc_thread = create_gc(registry, backend)
     gc_thread.start()
+
+    app.register_blueprint(services.create_bp(registry, backend))
+    app.register_blueprint(catalog.create_bp(registry))
 
     return app
 
 
 def main():
     args = parse_args()
-
     app = create_app(args)
     app.run(host=args.host, port=args.port)

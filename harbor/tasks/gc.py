@@ -1,13 +1,18 @@
+import logging
+import threading
 import time
 
+from ..core.registry import Registry
 
-def start_gc(registry, on_change):
+logger = logging.getLogger(__name__)
 
-    while True:
 
-        expired = registry.remove_expired()
+def create_gc(registry: Registry) -> threading.Thread:
+    def run():
+        while True:
+            time.sleep(10)
+            expired = registry.remove_expired()
+            for service in expired:
+                logger.info("GC: removed expired service %s", service.id)
 
-        if expired:
-            on_change()
-
-        time.sleep(5)
+    return threading.Thread(target=run, daemon=True)
