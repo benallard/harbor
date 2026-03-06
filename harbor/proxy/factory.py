@@ -10,4 +10,4 @@ def create_backend(app, backend, caddy_admin):
     if backend == "caddy":
         return CaddyBackend(caddy_admin)
 
-    raise RuntimeError(f"Unsupported backend: {app.config.PROXY_BACKEND}")
+    raise RuntimeError(f"Unsupported backend: {backend}")

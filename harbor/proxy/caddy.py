@@ -46,27 +46,45 @@ class CaddyBackend(ProxyBackend):
                 "CaddyBackend: unknown event %s for service %s", event, service.id
             )
 
-
-def render_route(service: Service):
+def render_route(service: Service) -> dict:
     if service.kind == "proxy":
-        # If public_paths is set, use it; otherwise, proxy everything under prefix
         paths = service.public_paths or [f"{service.prefix}*"]
-
-        route = {
+        return {
             "match": [{"path": paths}],
             "handle": [
+                {
+                    "handler": "rewrite",
+                    "strip_path_prefix": service.prefix
+                },
                 {
                     "handler": "reverse_proxy",
                     "upstreams": [
                         {"dial": upstream} for upstream in (service.upstreams or [])
                     ],
+                    "headers": {
+                        "request": {
+                            "set": {
+                                "X-Forwarded-For": ["{http.request.remote.host}"],
+                                "X-Real-IP": ["{http.request.remote.host}"],
+                                "X-Forwarded-Proto": ["{http.request.scheme}"]
+                            }
+                        }
+                    }
                 }
-            ],
+            ]
         }
-        return route
+
     elif service.kind == "static":
-        route = {
+        return {
             "match": [{"path": [f"{service.prefix}*"]}],
-            "handle": [{"handler": "file_server", "root": service.directory}],
+            "handle": [
+                {
+                    "handler": "rewrite",
+                    "strip_path_prefix": service.prefix
+                },
+                {
+                    "handler": "file_server",
+                    "root": service.directory
+                }
+            ]
         }
-        return route
