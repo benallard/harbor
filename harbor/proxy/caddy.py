@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 
 class CaddyBackend(ProxyBackend):
 
-    def __init__(self, admin_url: str):
+    def __init__(self, admin_url: str, server_name: str = "srv0"):
+        self.server_name = server_name
         if admin_url.startswith("unix://"):
             socket_path = admin_url[len("unix://") :]
             transport = httpx.HTTPTransport(uds=socket_path)
@@ -20,7 +21,9 @@ class CaddyBackend(ProxyBackend):
         route["@id"] = route_id
         response = self.client.get(f"/id/{route_id}")
         if response.status_code == 404:
-            self.client.put("/config/apps/http/servers/harbor/routes", json=route)
+            self.client.put(
+                f"/config/apps/http/servers/{self.server_name}/routes", json=route
+            )
         else:
             self.client.patch(f"/id/{route_id}", json=route)
 
@@ -46,16 +49,14 @@ class CaddyBackend(ProxyBackend):
                 "CaddyBackend: unknown event %s for service %s", event, service.id
             )
 
+
 def render_route(service: Service) -> dict:
     if service.kind == "proxy":
         paths = service.public_paths or [f"{service.prefix}*"]
         return {
             "match": [{"path": paths}],
             "handle": [
-                {
-                    "handler": "rewrite",
-                    "strip_path_prefix": service.prefix
-                },
+                {"handler": "rewrite", "strip_path_prefix": service.prefix},
                 {
                     "handler": "reverse_proxy",
                     "upstreams": [
@@ -66,25 +67,19 @@ def render_route(service: Service) -> dict:
                             "set": {
                                 "X-Forwarded-For": ["{http.request.remote.host}"],
                                 "X-Real-IP": ["{http.request.remote.host}"],
-                                "X-Forwarded-Proto": ["{http.request.scheme}"]
+                                "X-Forwarded-Proto": ["{http.request.scheme}"],
                             }
                         }
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         }
 
     elif service.kind == "static":
         return {
             "match": [{"path": [f"{service.prefix}*"]}],
             "handle": [
-                {
-                    "handler": "rewrite",
-                    "strip_path_prefix": service.prefix
-                },
-                {
-                    "handler": "file_server",
-                    "root": service.directory
-                }
-            ]
+                {"handler": "rewrite", "strip_path_prefix": service.prefix},
+                {"handler": "file_server", "root": service.directory},
+            ],
         }

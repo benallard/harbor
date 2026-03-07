@@ -30,8 +30,14 @@ def parse_args():
 
     parser.add_argument(
         "--caddy-admin",
-        default="http://127.0.0.1:2019",
-        help="Caddy Admin API URL (default: http://127.0.0.1:2019)",
+        default="unix:///run/caddy/admin.socket",
+        help="Caddy Admin API URL or unix socket (default: unix:///run/caddy/admin.sock)",
+    )
+
+    parser.add_argument(
+        "--caddy-server-name",
+        default="srv0",
+        help="Caddy server name to manage routes for (default: srv0)",
     )
 
     parser.add_argument(
@@ -47,7 +53,9 @@ def create_app(args):
     app = Flask(__name__)
     static = load_services(args.static_dir)
     registry = Registry(static)
-    backend = create_backend(app, args.backend, args.caddy_admin)
+    backend = create_backend(
+        app, args.backend, args.caddy_admin, args.caddy_server_name
+    )
 
     registry.subscribe(backend.on_event)
     registry.subscribe(catalog.notify_subscribers)
@@ -58,7 +66,7 @@ def create_app(args):
     gc_thread = create_gc(registry, backend)
     gc_thread.start()
 
-    app.register_blueprint(services.create_bp(registry, backend))
+    app.register_blueprint(services.create_bp(registry))
     app.register_blueprint(catalog.create_bp(registry))
 
     return app
