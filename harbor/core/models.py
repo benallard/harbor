@@ -19,7 +19,7 @@ class Service:
         return Service(
             id=data["id"],
             prefix=data["prefix"],
-            kind=data["type"],
+            kind=data["kind"],
             upstreams=data.get("upstreams"),
             directory=data.get("directory"),
             source=source,

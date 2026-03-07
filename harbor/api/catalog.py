@@ -17,14 +17,11 @@ def create_bp(registry: Registry):
     _registry = registry
     return bp
 
-
 def _serialize(service):
     return {
         "id": service.id,
         "name": service.name or service.id,
         "prefix": service.prefix,
-        "upstreams": service.upstreams,
-        "directory": service.directory,
         "icon": service.icon,
     }
 

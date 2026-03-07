@@ -21,14 +21,17 @@ class CaddyBackend(ProxyBackend):
         route["@id"] = route_id
         response = self.client.get(f"/id/{route_id}")
         if response.status_code == 404:
+            logger.debug("Creating new route %s for service %s", route_id, route)
             self.client.put(
-                f"/config/apps/http/servers/{self.server_name}/routes", json=route
+                f"/config/apps/http/servers/{self.server_name}/routes/0", json=route
             )
         else:
+            logger.debug("Updating route %s for service %s", route_id, route)
             self.client.patch(f"/id/{route_id}", json=route)
 
     def apply(self, services):
         for service in services:
+            logger.info("Applying static service %s at %s", service.id, service.prefix)
             route = render_route(service)
             self._upsert_route(f"static-{service.id}", route)
 
@@ -52,7 +55,10 @@ class CaddyBackend(ProxyBackend):
 
 def render_route(service: Service) -> dict:
     if service.kind == "proxy":
-        paths = service.public_paths or [f"{service.prefix}*"]
+        if service.public_paths:
+            paths = [f"{service.prefix}{p}" for p in service.public_paths]
+        else:
+            paths = [f"{service.prefix}*"]
         return {
             "match": [{"path": paths}],
             "handle": [
