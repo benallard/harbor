@@ -5,15 +5,14 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s — %(message)s",
 )
 
-import argparse
-from flask import Flask
-from yaml import parser
+import argparse # noqa: E402
+from flask import Flask # noqa: E402
 
-from .core.registry import Registry
-from .core.loader import load_services
-from .proxy.factory import create_backend
-from .tasks.gc import create_gc
-from .api import services, catalog
+from .core.registry import Registry # noqa: E402
+from .core.loader import load_services # noqa: E402
+from .proxy.factory import create_backend # noqa: E402
+from .tasks.gc import create_gc # noqa: E402
+from .api import services, catalog # noqa: E402
 
 
 def parse_args():
@@ -62,9 +61,7 @@ def create_app(args):
     app = Flask(__name__)
     static = load_services(args.static_dir)
     registry = Registry(static)
-    backend = create_backend(
-        app, args.backend, args.backend_url, args.backend_option
-    )
+    backend = create_backend(app, args.backend, args.backend_url, args.backend_option)
 
     registry.subscribe(backend.on_event)
     registry.subscribe(catalog.notify_subscribers)

@@ -17,6 +17,7 @@ def create_bp(registry: Registry):
     _registry = registry
     return bp
 
+
 def _serialize(service):
     return {
         "id": service.id,
