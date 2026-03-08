@@ -1,41 +1,50 @@
 # Harbor
 
-Harbor is a lightweight service registry and reverse proxy controller designed for single-host environments. It exposes services under path prefixes and manages proxy configuration dynamically, with support for both static and ephemeral services.
+Some services are always there — dependable, unmoving, like ships that never leave port.
+Others come and go, appearing just long enough to do their job before disappearing again.
+Harbor manages both, exposing them cleanly under a reverse proxy without you having to think about it.
+
+Harbor is a lightweight service registry and proxy controller for single-host environments.
+It registers routes with your reverse proxy at startup for static services, and adds or removes them on the fly as ephemeral services come and go.
+When a lease expires, Harbor cleans up automatically.
+
+A companion SPA — **Bridge** — provides a real-time dashboard of all public services, updated live via SSE.
 
 ---
 
 ## How it works
 
-Harbor sits alongside your reverse proxy and manages its configuration via API. Services can be declared statically via configuration files, or registered dynamically at runtime with a TTL lease. When a lease expires, Harbor automatically removes the route.
-
-A built-in SPA dashboard lists all public services and updates in real time via SSE.
-
-### Typical deployment
+Harbor sits alongside your reverse proxy and manages its routing configuration via API.
+It never handles traffic itself in production — it just tells the proxy what to route where.
 
 ```
 Client → Caddy → Service
+            ↑
+          Harbor
 ```
 
-Harbor manages Caddy's routes via the Caddy Admin API, leaving all traffic to flow directly through Caddy.
+Static services are declared in `.route` files and registered with Caddy at startup.
+Ephemeral services register themselves via Harbor's internal API with a TTL lease, and are removed automatically when the lease expires or is not renewed.
 
-### Embedded proxy (development)
+### Embedded proxy mode
+
+For local development, Harbor can act as the proxy itself:
 
 ```
-Client → Harbor (Flask backend) → Service
+Client → Harbor → Service
 ```
 
-Harbor can act as the proxy itself, useful for local development without a separate Caddy instance.
+No Caddy required.
+Useful for testing without a full proxy setup.
 
 ---
 
-## Service model
+## Route configuration
 
-Services are exposed under a path prefix and come in two kinds:
+Routes are declared as `.route` files in `/etc/harbor/routes.d/`.
+Each file describes one service.
 
-- `proxy` — reverse proxies requests to one or more upstreams
-- `static` — serves files from a local directory
-
-Example static configuration (`/etc/harbor/services.d/grafana.yaml`):
+**Proxy route** — reverse proxies requests to one or more upstreams:
 
 ```yaml
 id: grafana
@@ -47,22 +56,49 @@ upstreams:
 icon: /assets/grafana.png
 ```
 
+**Static route** — serves files from a local directory:
+
+```yaml
+id: docs
+name: Documentation
+kind: static
+prefix: /docs
+directory: /srv/docs
+```
+
+**Restricting public paths** — only expose specific paths of a service:
+
+```yaml
+id: harbor
+name: Harbor
+kind: proxy
+prefix: /harbor
+upstreams:
+  - 127.0.0.1:8080
+public_paths:
+  - /catalog
+  - /catalog/*
+public: true
+```
+
+Setting `public: false` hides a service from the Bridge catalog entirely.
+
 ---
 
-## Dynamic services
+## Ephemeral services
 
-Dynamic services are registered via the internal API and expire unless renewed.
+Ephemeral services register themselves via Harbor's internal API and expire unless renewed.
 
-**Register a service:**
+**Register:**
 
 ```
 POST /services
 Content-Type: application/json
 
 {
-  "id": "preview-123",
-  "prefix": "/preview/123",
-  "type": "proxy",
+  "id": "preview-abc",
+  "prefix": "/preview/abc",
+  "kind": "proxy",
   "upstreams": ["127.0.0.1:5100"],
   "ttl": 60
 }
@@ -72,75 +108,53 @@ Response:
 
 ```json
 {
-  "id": "preview-123",
+  "id": "preview-abc",
   "lease": "<token>",
   "ttl": 60
 }
 ```
 
-**Renew a lease:**
+**Renew:**
 
 ```
 POST /services/<id>/renew
 Authorization: <lease-token>
 ```
 
-**Unregister a service:**
+**Unregister:**
 
 ```
 DELETE /services/<id>
 ```
 
-If a lease is not renewed before it expires, Harbor removes the route automatically.
+If a lease expires without renewal, Harbor removes the route automatically and notifies Bridge via SSE.
 
 ---
 
-## Public catalog API
+## Bridge catalog API
 
-The catalog API is intended for the SPA dashboard and other public consumers.
-
-**List all public services:**
+Bridge consumes the catalog API to display the public service dashboard.
 
 ```
-GET /catalog
+GET /catalog              — list all public services
+GET /catalog/icon/<id>    — retrieve a service icon
+GET /catalog/stream       — SSE stream of live updates
 ```
 
-**Get a service icon:**
-
-```
-GET /catalog/icon/<service-id>
-```
-
-**Subscribe to live updates (SSE):**
-
-```
-GET /catalog/stream
-```
-
-Events: `registered`, `unregistered`, `expired`. Each event carries the full service object.
-
----
-
-## Configuration
-
-| Variable | Description | Default |
-|---|---|---|
-| `HARBOR_BACKEND` | Proxy backend (`caddy`, `flask`) | `caddy` |
-| `HARBOR_CADDY_ADMIN` | Caddy admin URL or unix socket | `http://127.0.0.1:2019` |
-| `HARBOR_HOST` | Host to bind Harbor on | `0.0.0.0` |
-| `HARBOR_PORT` | Port to bind Harbor on | `8080` |
-
-For unix socket support, use `unix:///run/caddy/admin.sock` as the Caddy admin URL.
+SSE events: `registered`, `unregistered`, `expired`.
+Each event carries the full service object.
+Bridge updates in real time without polling.
 
 ---
 
 ## Caddy configuration
 
-Harbor expects Caddy to be running with the admin API enabled and accessible via a unix socket. Place the following in `/etc/caddy/Caddyfile`:
+Harbor manages Caddy's routes via the admin API over a unix socket.
+Place the following in `/etc/caddy/Caddyfile`:
 
 ```caddyfile
 {
-    admin unix//run/caddy/admin.sock
+    admin unix//run/caddy/admin.socket|0660
 }
 
 :80 {
@@ -151,51 +165,51 @@ Harbor expects Caddy to be running with the admin API enabled and accessible via
 }
 ```
 
-This configures the admin API on a unix socket and serves the Bridge SPA as a catch-all fallback. Harbor's service routes are more specific and will always take priority over the catch-all regardless of insertion order.
+The catch-all serves Bridge.
+Harbor's service routes are more specific and always take priority regardless of insertion order.
 
-Set `HARBOR_CADDY_ADMIN` accordingly:
-
-```
-HARBOR_CADDY_ADMIN=unix:///run/caddy/admin.sock
-```
-
-Harbor's process user must have access to the socket. The simplest way is to add it to the `caddy` group:
+Harbor's process user needs access to the socket:
 
 ```bash
-usermod -aG caddy <harbor-user>
+sudo usermod -aG caddy <harbor-user>
 ```
 
 ---
 
-## Installation
+## Running Harbor
 
 ```
 poetry install
-```
-
-Run Harbor:
-
-```
 poetry run harbor
 ```
 
-Run with embedded proxy (development):
+Key options:
 
 ```
-HARBOR_BACKEND=flask poetry run harbor
+--static-dir       Directory for .route files (default: /etc/harbor/routes.d)
+--backend          Proxy backend: caddy or flask (default: caddy)
+--backend-url      Backend admin URL or socket (default: unix:///run/caddy/admin.socket)
+--backend-option   Backend-specific options, e.g. server-name=srv0
+--host             Host to bind on (default: 0.0.0.0)
+--port             Port to bind on (default: 8080)
+```
+
+Development mode with embedded proxy:
+
+```
+poetry run harbor --backend flask
 ```
 
 ---
 
-## Deployment with Gunicorn
+## Deployment
 
-SSE requires a threaded worker model. Recommended invocation:
+SSE requires a threaded Gunicorn worker.
+Single worker keeps the SSE subscriber list consistent:
 
 ```
 gunicorn -k gthread --workers 1 --threads 16 harbor:app
 ```
-
-Single worker is required to keep the in-process SSE subscriber list consistent across connections.
 
 ---
 
@@ -215,8 +229,9 @@ poetry run ruff check .
 harbor/
   api/        REST API blueprints (services, catalog)
   core/       registry, leases, models, GC
-  proxy/      proxy backends (caddy, flask)
+  backend/    proxy backends (caddy, flask)
 tests/
+  fixtures/   static .route files for testing
 ```
 
 ---
