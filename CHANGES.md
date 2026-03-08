@@ -2,6 +2,8 @@
 
 All notable changes to Harbor will be documented in this file.
 
+## [Unreleased]
+
 ## [0.9.0] - 2026-03-08
 
 Initial release.
