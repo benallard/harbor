@@ -2,7 +2,7 @@ import argparse
 import pytest
 from unittest.mock import MagicMock
 from harbor.app import create_app
-from harbor.proxy.flask_proxy import FlaskProxyBackend
+from harbor.backend.flask_proxy import FlaskProxyBackend
 
 
 @pytest.fixture

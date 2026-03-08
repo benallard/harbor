@@ -10,7 +10,7 @@ from flask import Flask  # noqa: E402
 
 from .core.registry import Registry  # noqa: E402
 from .core.loader import load_services  # noqa: E402
-from .proxy.factory import create_backend  # noqa: E402
+from .backend.factory import create_backend  # noqa: E402
 from .tasks.gc import create_gc  # noqa: E402
 from .api import services, catalog  # noqa: E402
 

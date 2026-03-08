@@ -1,7 +1,7 @@
 import pytest
 import json
 from pytest_httpx import HTTPXMock
-from harbor.proxy.caddy import CaddyBackend
+from harbor.backend.caddy import CaddyBackend
 from harbor.core.models import Service
 
 

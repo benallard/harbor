@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock
-from harbor.proxy.flask_proxy import Router
+from harbor.backend.flask_proxy import Router
 from harbor.core.models import Service
 
 
@@ -31,7 +31,7 @@ def test_gateway_proxy(flask_client):
     mock_response.headers = {}
 
     with patch(
-        "harbor.proxy.flask_proxy.httpx.Client.request", return_value=mock_response
+        "harbor.backend.flask_proxy.httpx.Client.request", return_value=mock_response
     ):
         resp = flask_client.get("/proxy/get")
         assert resp.status_code == 200

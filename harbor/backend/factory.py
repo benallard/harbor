@@ -1,5 +1,5 @@
-from harbor.proxy.caddy import CaddyBackend
-from harbor.proxy.flask_proxy import FlaskProxyBackend
+from .caddy import CaddyBackend
+from .flask_proxy import FlaskProxyBackend
 
 
 def create_backend(app, backend, url, options):
