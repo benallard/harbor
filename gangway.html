@@ -50,19 +50,20 @@
       padding: 48px 40px;
     }
 
-    header {
+    footer {
       display: flex;
-      align-items: baseline;
-      gap: 16px;
-      margin-bottom: 48px;
+      align-items: center;
+      gap: 12px;
+      margin-top: 48px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 1;
     }
 
-    h1 {
-      font-family: var(--font-mono);
-      font-size: 1.5rem;
-      font-weight: 400;
-      letter-spacing: -0.02em;
-      color: var(--text);
+    footer .sse-status {
+      margin-left: auto;
     }
 
     .sse-status {
@@ -227,15 +228,6 @@
   </style>
 </head>
 <body>
-
-  <header>
-    <h1>gangway</h1>
-    <div class="sse-status">
-      <div class="sse-dot" id="sseDot"></div>
-      <span id="sseLabel">connecting</span>
-    </div>
-  </header>
-
   <svg
     viewBox="0 0 1200 600"
     xmlns="http://www.w3.org/2000/svg"
@@ -260,6 +252,14 @@
   </svg>
 
   <div id="grid"></div>
+
+  <footer>
+    <div class="sse-status">
+      <div class="sse-dot" id="sseDot"></div>
+      <span id="sseLabel">connecting</span>
+    </div>
+    <span>made with love by gangway in the harbor</span>
+  </footer>
 
   <script>
     const CATALOG_URL = '/harbor/catalog';
