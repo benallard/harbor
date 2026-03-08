@@ -1,23 +1,32 @@
-import requests
+import httpx
 
 from flask import request, Response, send_from_directory, abort
 
 from .base import ProxyBackend
-from .router import Router
 
 
 class FlaskProxyBackend(ProxyBackend):
 
     def __init__(self, app):
-
         self.app = app
         self.router = Router()
-
+        self.client = httpx.Client()
         self._install_gateway()
 
     def apply(self, services):
-
         self.router.rebuild(services)
+
+    def register(self, service):
+        self.router.add(service)
+
+    def unregister(self, service):
+        self.router.remove(service)
+
+    def on_event(self, event, service):
+        if event == "registered":
+            self.register(service)
+        elif event in ("unregistered", "expired"):
+            self.unregister(service)
 
     def _install_gateway(self):
 
@@ -31,9 +40,7 @@ class FlaskProxyBackend(ProxyBackend):
             methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
         )
         def gateway(path):
-
             full_path = "/" + path
-
             service, subpath = self.router.match(full_path)
 
             if not service:
@@ -48,43 +55,56 @@ class FlaskProxyBackend(ProxyBackend):
             abort(500)
 
     def _serve_static(self, service, subpath):
-
         if not service.directory:
             abort(500)
-
         return send_from_directory(service.directory, subpath)
 
     def _proxy(self, service, subpath):
-
         upstream = service.upstreams[0]
-
         url = upstream.rstrip("/") + "/" + subpath
 
-        resp = requests.request(
+        excluded_req = {"host", "content-length"}
+        headers = {k: v for k, v in request.headers if k.lower() not in excluded_req}
+
+        resp = self.client.request(
             method=request.method,
             url=url,
-            headers=self._filtered_headers(),
-            data=request.get_data(),
-            cookies=request.cookies,
-            stream=True,
-            allow_redirects=False,
+            headers=headers,
+            content=request.get_data(),
+            cookies=dict(request.cookies),
+            follow_redirects=False,
         )
 
-        excluded = [
-            "content-encoding",
-            "content-length",
-            "transfer-encoding",
-            "connection",
-        ]
-
-        headers = [
-            (k, v) for k, v in resp.raw.headers.items() if k.lower() not in excluded
-        ]
+        excluded_resp = {"content-encoding", "content-length", "transfer-encoding", "connection"}
+        headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_resp]
 
         return Response(resp.content, resp.status_code, headers)
+    
+class Router:
 
-    def _filtered_headers(self):
+    def __init__(self):
+        self.routes = []
 
-        excluded = ["host", "content-length"]
+    def rebuild(self, services):
+        # longest prefix first
+        self.routes = sorted(services, key=lambda s: len(s.prefix), reverse=True)
 
-        return {k: v for k, v in request.headers if k.lower() not in excluded}
+    def add(self, service):
+        self.routes.append(service)
+        self.routes.sort(key=lambda s: len(s.prefix), reverse=True)
+
+    def remove(self, service):
+        self.routes = [r for r in self.routes if r.id != service.id]
+
+    def match(self, path):
+        for service in self.routes:
+            prefix = service.prefix.rstrip("/")
+
+            if path == prefix:
+                return service, ""
+
+            if path.startswith(prefix + "/"):
+                subpath = path[len(prefix) + 1 :]
+                return service, subpath
+
+        return None, None

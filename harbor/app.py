@@ -42,6 +42,7 @@ def parse_args():
 
     parser.add_argument(
         "--backend-option",
+        dest="backend_options",
         action="append",
         metavar="KEY=VALUE",
         default=[],
@@ -61,7 +62,7 @@ def create_app(args):
     app = Flask(__name__)
     static = load_services(args.static_dir)
     registry = Registry(static)
-    backend = create_backend(app, args.backend, args.backend_url, args.backend_option)
+    backend = create_backend(app, args.backend, args.backend_url, args.backend_options)
 
     registry.subscribe(backend.on_event)
     registry.subscribe(catalog.notify_subscribers)

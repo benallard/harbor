@@ -1,7 +1,8 @@
+import argparse
 import pytest
 from unittest.mock import MagicMock
 from harbor.app import create_app
-from harbor.core.models import Service
+from harbor.proxy.flask_proxy import FlaskProxyBackend
 
 
 @pytest.fixture
@@ -18,11 +19,10 @@ def mock_backend():
 def app(mock_backend, monkeypatch):
     monkeypatch.setattr("harbor.app.create_backend", lambda *a, **kw: mock_backend)
     
-    import argparse
     args = argparse.Namespace(
         backend="caddy",
         backend_url="http://localhost:2019",
-        backend_option=[],
+        backend_options=[],
         static_dir="tests/fixtures/routes.d",
     )
     app = create_app(args)
@@ -33,3 +33,21 @@ def app(mock_backend, monkeypatch):
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+@pytest.fixture
+def flask_app(monkeypatch):
+    monkeypatch.setattr("harbor.app.create_backend", lambda *a, **kw: FlaskProxyBackend(a[0]))
+    
+    args = argparse.Namespace(
+        backend="flask",
+        backend_url="",
+        backend_options=[],
+        static_dir="tests/fixtures/routes.d",
+    )
+    app = create_app(args)
+    app.config["TESTING"] = True
+    return app
+
+@pytest.fixture
+def flask_client(flask_app):
+    return flask_app.test_client()
