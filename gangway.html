@@ -332,6 +332,7 @@
     function removeService(id) {
       const card = grid.querySelector(`[data-id="${id}"]`);
       if (card) {
+        card.classList.remove('priority');
         card.classList.add('removing');
         card.addEventListener('animationend', () => card.remove(), { once: true });
       }
