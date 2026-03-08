@@ -187,6 +187,16 @@
       margin-top: auto;
     }
 
+    .card.priority {
+      border-left: 3px solid var(--accent);
+      animation: appear 0.3s ease-out both, urgency 2s ease-in-out infinite;
+    }
+
+    @keyframes urgency {
+      0%, 100% { box-shadow: var(--shadow); }
+      50%       { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+    }
+
     .badge {
       font-family: var(--font-mono);
       font-size: 0.65rem;
@@ -302,6 +312,7 @@
         </div>
       `;
 
+      if (service.priority) card.classList.add('priority');
       return card;
     }
 
@@ -310,7 +321,11 @@
       const existing = grid.querySelector(`[data-id="${service.id}"]`);
       if (existing) existing.remove();
       const card = renderCard(service);
-      grid.appendChild(card);
+      if (service.priority) {
+        grid.prepend(card);
+      } else {
+        grid.appendChild(card);
+      }
       updateEmpty();
     }
 

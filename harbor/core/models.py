@@ -14,6 +14,7 @@ class Service:
     public_paths: Optional[List[str]] = None  # only these paths are proxied publicly
     name: Optional[str] = None  # human-friendly name
     icon: Optional[str] = None  # URL or path to an icon
+    priority: bool = False  # if true, this service is displayed with a special highlight
 
     def from_dict(data: dict, source: str) -> "Service":
         return Service(
@@ -27,6 +28,7 @@ class Service:
             public_paths=data.get("public_paths"),
             name=data.get("name"),
             icon=data.get("icon"),
+            priority=data.get("priority", False),
         )
 
 

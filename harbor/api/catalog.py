@@ -25,6 +25,7 @@ def _serialize(service):
         "prefix": service.prefix,
         "icon": service.icon,
         "source": service.source,
+        "priority": service.priority,
     }
 
 

@@ -8,7 +8,7 @@ Harbor is a lightweight service registry and proxy controller for single-host en
 It registers routes with your reverse proxy at startup for static services, and adds or removes them on the fly as ephemeral services come and go.
 When a lease expires, Harbor cleans up automatically.
 
-A companion SPA — **Bridge** — provides a real-time dashboard of all public services, updated live via SSE.
+A companion SPA — **Gangway** — provides a real-time dashboard of all public services, updated live via SSE.
 
 ---
 
@@ -131,9 +131,9 @@ If a lease expires without renewal, Harbor removes the route automatically and n
 
 ---
 
-## Bridge catalog API
+## Gangway catalog API
 
-Bridge consumes the catalog API to display the public service dashboard.
+Gangway consumes the catalog API to display the public service dashboard.
 
 ```
 GET /catalog              — list all public services
@@ -143,7 +143,7 @@ GET /catalog/stream       — SSE stream of live updates
 
 SSE events: `registered`, `unregistered`, `expired`.
 Each event carries the full service object.
-Bridge updates in real time without polling.
+Gangway updates in real time without polling.
 
 ---
 
@@ -165,7 +165,7 @@ Place the following in `/etc/caddy/Caddyfile`:
 }
 ```
 
-The catch-all serves Bridge.
+The catch-all serves Gangway.
 Harbor's service routes are more specific and always take priority regardless of insertion order.
 
 Harbor's process user needs access to the socket:
@@ -234,8 +234,66 @@ tests/
   fixtures/   static .route files for testing
 ```
 
+## Priority services
+
+Ephemeral services can declare themselves as high priority.
+Gangway displays priority cards first in the grid with a distinct visual treatment.
+Useful for services that require immediate user action, such as a device flow login.
+
+Set the flag at registration time:
+
+```json
+{
+  "id": "device-login",
+  "prefix": "/login",
+  "kind": "proxy",
+  "upstreams": ["127.0.0.1:8080"],
+  "ttl": 300,
+  "priority": true
+}
+```
+
+Or in a `.route` file:
+
+```yaml
+id: device-login
+name: Device Login
+kind: proxy
+prefix: /login
+upstreams:
+  - 127.0.0.1:8080
+priority: true
+```
+
 ---
 
-## License
+## Future: service widgets
+
+> This section documents a design direction for future consideration.
+> It is not implemented beyond the `priority` flag above.
+
+Services could expose a `.well-known/gangway` endpoint returning a small JSON descriptor:
+
+```json
+{
+  "name": "Grafana",
+  "description": "Metrics and dashboards",
+  "icon": "/logo.png",
+  "color": "#F46800",
+  "status": "/api/health",
+  "widget": "/gangway-widget.html",
+  "size": "large"
+}
+```
+
+Gangway would fetch this descriptor and use it to enrich the service card.
+The `widget` field would point to a small HTML fragment that Gangway embeds directly — the service owns the rendering entirely, Gangway just provides the frame.
+The `size` hint (`small`, `medium`, `large`) would map to CSS grid spans.
+
+This approach keeps Harbor itself free of widget configuration complexity — services declare their own presentation, Harbor just routes.
+
+---
+
+
 
 MIT
