@@ -75,11 +75,19 @@ class FlaskProxyBackend(ProxyBackend):
             follow_redirects=False,
         )
 
-        excluded_resp = {"content-encoding", "content-length", "transfer-encoding", "connection"}
-        headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_resp]
+        excluded_resp = {
+            "content-encoding",
+            "content-length",
+            "transfer-encoding",
+            "connection",
+        }
+        headers = [
+            (k, v) for k, v in resp.headers.items() if k.lower() not in excluded_resp
+        ]
 
         return Response(resp.content, resp.status_code, headers)
-    
+
+
 class Router:
 
     def __init__(self):

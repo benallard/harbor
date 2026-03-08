@@ -18,7 +18,7 @@ def mock_backend():
 @pytest.fixture
 def app(mock_backend, monkeypatch):
     monkeypatch.setattr("harbor.app.create_backend", lambda *a, **kw: mock_backend)
-    
+
     args = argparse.Namespace(
         backend="caddy",
         backend_url="http://localhost:2019",
@@ -34,10 +34,13 @@ def app(mock_backend, monkeypatch):
 def client(app):
     return app.test_client()
 
+
 @pytest.fixture
 def flask_app(monkeypatch):
-    monkeypatch.setattr("harbor.app.create_backend", lambda *a, **kw: FlaskProxyBackend(a[0]))
-    
+    monkeypatch.setattr(
+        "harbor.app.create_backend", lambda *a, **kw: FlaskProxyBackend(a[0])
+    )
+
     args = argparse.Namespace(
         backend="flask",
         backend_url="",
@@ -47,6 +50,7 @@ def flask_app(monkeypatch):
     app = create_app(args)
     app.config["TESTING"] = True
     return app
+
 
 @pytest.fixture
 def flask_client(flask_app):

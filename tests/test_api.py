@@ -1,5 +1,4 @@
 import pytest
-from harbor.core.models import Service
 
 
 def make_dynamic_service(id="dyn-1", prefix="/dynamic", kind="proxy"):
@@ -13,6 +12,7 @@ def make_dynamic_service(id="dyn-1", prefix="/dynamic", kind="proxy"):
 
 
 # --- Catalog ---
+
 
 def test_catalog_returns_public_services(client):
     response = client.get("/catalog")
@@ -51,6 +51,7 @@ def test_catalog_icon_no_icon(client):
     response = client.get("/catalog/icon/test-proxy")
     assert response.status_code == 404
 
+
 @pytest.mark.skip(reason="SSE hangs with Flask test client")
 def test_catalog_stream_content_type(client):
     response = client.get("/catalog/stream")
@@ -58,6 +59,7 @@ def test_catalog_stream_content_type(client):
 
 
 # --- Services ---
+
 
 def test_create_service(client, mock_backend):
     response = client.post("/services", json=make_dynamic_service())
@@ -122,5 +124,7 @@ def test_renew_missing_token(client):
 
 
 def test_renew_nonexistent_service(client):
-    response = client.post("/services/nonexistent/renew", headers={"Authorization": "any"})
+    response = client.post(
+        "/services/nonexistent/renew", headers={"Authorization": "any"}
+    )
     assert response.status_code == 403

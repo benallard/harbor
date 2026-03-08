@@ -30,7 +30,9 @@ def test_gateway_proxy(flask_client):
     mock_response.status_code = 200
     mock_response.headers = {}
 
-    with patch("harbor.proxy.flask_proxy.httpx.Client.request", return_value=mock_response):
+    with patch(
+        "harbor.proxy.flask_proxy.httpx.Client.request", return_value=mock_response
+    ):
         resp = flask_client.get("/proxy/get")
         assert resp.status_code == 200
 
@@ -42,12 +44,15 @@ def test_gateway_not_found(flask_client):
 
 def test_gateway_static(flask_client, tmp_path):
     (tmp_path / "hello.txt").write_text("hello")
-    flask_client.post("/services", json={
-        "id": "tmp-static",
-        "prefix": "/tmp-static",
-        "kind": "static",
-        "directory": str(tmp_path),
-        "ttl": 60,
-    })
+    flask_client.post(
+        "/services",
+        json={
+            "id": "tmp-static",
+            "prefix": "/tmp-static",
+            "kind": "static",
+            "directory": str(tmp_path),
+            "ttl": 60,
+        },
+    )
     resp = flask_client.get("/tmp-static/hello.txt")
     assert resp.status_code == 200
