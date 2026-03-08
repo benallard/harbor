@@ -1,0 +1,9 @@
+id: harbor-catalog
+name: Harbor Catalog
+kind: proxy
+prefix: /harbor
+upstreams:
+ - 127.1:8080
+public_paths:
+ - /catalog*
+public: False

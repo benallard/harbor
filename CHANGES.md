@@ -2,7 +2,22 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [Unreleased]
+## [0.10.0] - 2026-03-08
+
+### Gangway
+- Renamed from Bridge to Gangway throughout
+- Removed Google Fonts dependency
+- Removed header, added discreet fixed footer with attribution
+- SSE status indicator moved to fixed top-right corner
+- Harbor offline state with explanation message
+- Catalog reload on SSE reconnect
+- Priority service support — high-priority cards appear first with visual emphasis
+- Priority card removal bug fixed
+- Priority animation conflict with disappear animation fixed
+
+### Harbor
+- `priority` flag added to `Service` model, registration API and catalog
+- Widget future direction documented in README
 
 ## [0.9.0] - 2026-03-08
 
