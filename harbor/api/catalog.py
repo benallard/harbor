@@ -24,6 +24,7 @@ def _serialize(service):
         "name": service.name or service.id,
         "prefix": service.prefix,
         "icon": service.icon,
+        "source": service.source,
     }
 
 
@@ -55,6 +56,7 @@ def catalog_stream():
         with _subscribers_lock:
             _subscribers.append(q)
         try:
+            yield ": connected\n\n" # flush headers immediatly
             while True:
                 payload = q.get()
                 yield f"data: {payload}\n\n"

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:          #f5f3ee;
+      --bg-card:     #fffefb;
+      --bg-card-hover: #fff;
+      --border:      #e8e4dc;
+      --text:        #2a2825;
+      --text-muted:  #8c887f;
+      --text-prefix: #5c7c6a;
+      --accent:      #c4735a;
+      --static:      #6a9b7e;
+      --ephemeral:   #c4935a;
+      --shadow:      0 1px 3px rgba(42,40,37,0.06), 0 4px 16px rgba(42,40,37,0.04);
+      --shadow-hover: 0 2px 8px rgba(42,40,37,0.10), 0 8px 32px rgba(42,40,37,0.08);
+      --radius:      12px;
+      --font-body:   'DM Sans', sans-serif;
+      --font-mono:   'DM Mono', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:          #1a1917;
+        --bg-card:     #221f1c;
+        --bg-card-hover: #272421;
+        --border:      #302c28;
+        --text:        #e8e4dc;
+        --text-muted:  #6b6760;
+        --text-prefix: #7aab8e;
+        --accent:      #d4836a;
+        --static:      #7aab8e;
+        --ephemeral:   #d4a36a;
+        --shadow:      0 1px 3px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.15);
+        --shadow-hover: 0 2px 8px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.2);
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 40px;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    h1 {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .sse-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .sse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s;
+    }
+
+    .sse-dot.connected { background: var(--static); }
+    .sse-dot.connected.pulse {
+      animation: pulse 0.6s ease-out;
+    }
+
+    @keyframes pulse {
+      0%   { transform: scale(1);   opacity: 1; }
+      50%  { transform: scale(2);   opacity: 0.5; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 0.2s, background 0.2s, transform 0.2s;
+      animation: appear 0.3s ease-out both;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card.removing {
+      animation: disappear 0.3s ease-in both;
+    }
+
+    @keyframes disappear {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-8px); }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      object-fit: contain;
+      flex-shrink: 0;
+      background: var(--border);
+    }
+
+    .icon-placeholder {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .card-name {
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .card-prefix {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-prefix);
+      font-weight: 300;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-static {
+      background: color-mix(in srgb, var(--static) 12%, transparent);
+      color: var(--static);
+    }
+
+    .badge-ephemeral {
+      background: color-mix(in srgb, var(--ephemeral) 12%, transparent);
+      color: var(--ephemeral);
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      margin-left: auto;
+    }
+
+    .status-dot.static    { background: var(--static); }
+    .status-dot.ephemeral { background: var(--ephemeral); }
+
+    #empty {
+      grid-column: 1 / -1;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 48px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>bridge</h1>
+    <div class="sse-status">
+      <div class="sse-dot" id="sseDot"></div>
+      <span id="sseLabel">connecting</span>
+    </div>
+  </header>
+
+  <div id="grid"></div>
+
+  <script>
+    const CATALOG_URL = '/harbor/catalog';
+    const STREAM_URL  = '/harbor/catalog/stream';
+
+    const grid    = document.getElementById('grid');
+    const sseDot  = document.getElementById('sseDot');
+    const sseLabel = document.getElementById('sseLabel');
+
+    const services = new Map();
+
+    function initials(name) {
+      return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    function renderCard(service) {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = service.prefix;
+      card.dataset.id = service.id;
+
+      const isEphemeral = service.source === 'dynamic';
+      const kindLabel   = isEphemeral ? 'ephemeral' : 'static';
+
+      const iconHtml = service.icon
+        ? `<img class="icon" src="${service.icon}" alt="${service.name}" />`
+        : `<div class="icon-placeholder">${initials(service.name || service.id)}</div>`;
+
+      card.innerHTML = `
+        <div class="card-header">
+          ${iconHtml}
+          <div>
+            <div class="card-name">${service.name || service.id}</div>
+            <div class="card-prefix">${service.prefix}</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="badge badge-${kindLabel}">${kindLabel}</span>
+          <div class="status-dot ${kindLabel}"></div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    function addService(service) {
+      services.set(service.id, service);
+      const existing = grid.querySelector(`[data-id="${service.id}"]`);
+      if (existing) existing.remove();
+      const card = renderCard(service);
+      grid.appendChild(card);
+      updateEmpty();
+    }
+
+    function removeService(id) {
+      const card = grid.querySelector(`[data-id="${id}"]`);
+      if (card) {
+        card.classList.add('removing');
+        card.addEventListener('animationend', () => card.remove(), { once: true });
+      }
+      services.delete(id);
+      updateEmpty();
+    }
+
+    function updateEmpty() {
+      const existing = grid.querySelector('#empty');
+      if (services.size === 0) {
+        if (!existing) {
+          const el = document.createElement('div');
+          el.id = 'empty';
+          el.textContent = 'no services registered';
+          grid.appendChild(el);
+        }
+      } else {
+        if (existing) existing.remove();
+      }
+    }
+
+    function pulseDot() {
+      sseDot.classList.remove('pulse');
+      void sseDot.offsetWidth;
+      sseDot.classList.add('pulse');
+    }
+
+    async function loadCatalog() {
+      try {
+        const resp = await fetch(CATALOG_URL);
+        const data = await resp.json();
+        data.forEach(addService);
+        updateEmpty();
+      } catch (e) {
+        console.error('Failed to load catalog:', e);
+      }
+    }
+
+    function connectStream() {
+      const es = new EventSource(STREAM_URL);
+
+      es.onopen = () => {
+        sseDot.classList.add('connected');
+        sseLabel.textContent = 'live';
+      };
+
+      es.onmessage = (e) => {
+        pulseDot();
+        try {
+          const { event, service } = JSON.parse(e.data);
+          if (event === 'registered') {
+            addService(service);
+          } else if (event === 'unregistered' || event === 'expired') {
+            removeService(service.id);
+          }
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      };
+
+      es.onerror = () => {
+        sseDot.classList.remove('connected');
+        sseLabel.textContent = 'reconnecting';
+        es.close();
+        setTimeout(connectStream, 3000);
+      };
+    }
+
+    loadCatalog().then(connectStream);
+  </script>
+</body>
+</html>
