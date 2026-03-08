@@ -21,7 +21,7 @@ def list_services():
             {
                 "id": s.id,
                 "prefix": s.prefix,
-                "type": s.kind,
+                "kind": s.kind,
                 "upstreams": s.upstreams,
                 "directory": s.directory,
                 "source": s.source,
@@ -34,7 +34,7 @@ def list_services():
 @bp.post("/services")
 def create_service():
     data = request.json
-    if not data or "id" not in data or "prefix" not in data or "type" not in data:
+    if not data or "id" not in data or "prefix" not in data or "kind" not in data:
         return jsonify({"error": "missing required fields"}), 400
     service = Service.from_dict(data, "dynamic")
     ttl = data.get("ttl", 60)

@@ -1,0 +1,7 @@
+id: test-private
+name: Test Private
+kind: proxy
+prefix: /private
+upstreams:
+  - 127.0.0.1:5001
+public: false

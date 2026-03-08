@@ -1,0 +1,7 @@
+id: test-proxy
+name: Test Proxy
+kind: proxy
+prefix: /proxy
+upstreams:
+  - 127.0.0.1:5000
+public: true

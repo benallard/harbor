@@ -50,8 +50,8 @@ def parse_args():
 
     parser.add_argument(
         "--static-dir",
-        default="/etc/harbor/service.d",
-        help="Directory for static service configs",
+        default="/etc/harbor/routes.d",
+        help="Directory for static route configs",
     )
 
     return parser.parse_args()

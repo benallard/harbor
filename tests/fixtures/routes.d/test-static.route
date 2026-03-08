@@ -1,0 +1,6 @@
+id: test-static
+name: Test Static
+kind: static
+prefix: /static
+directory: /srv/test
+public: true
