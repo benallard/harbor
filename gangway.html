@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bridge</title>
+  <title>Gangway</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -101,6 +101,8 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
+      position: relative;
+      z-index: 1;
     }
 
     .card {
@@ -230,12 +232,35 @@
 <body>
 
   <header>
-    <h1>bridge</h1>
+    <h1>gangway</h1>
     <div class="sse-status">
       <div class="sse-dot" id="sseDot"></div>
       <span id="sseLabel">connecting</span>
     </div>
   </header>
+
+  <svg
+    viewBox="0 0 1200 600"
+    xmlns="http://www.w3.org/2000/svg"
+    style="position:fixed; bottom:0; right:-100px; width:80vw; height:60vh; opacity:0.10; pointer-events:none; z-index:0;"
+    preserveAspectRatio="xMaxYMax meet"
+  >
+    <polygon points="0,580 200,580 700,100 500,100" fill="#7aab8e" />
+    <polygon points="200,580 400,580 900,100 700,100" fill="#c4a87a" />
+    <polygon points="400,580 600,580 1100,100 900,100" fill="#c4857a" />
+    <polygon points="600,580 800,580 1300,100 1100,100" fill="#7a9ab4" />
+    <line x1="200" y1="580" x2="700" y2="100" stroke="#6b6760" stroke-width="12" />
+    <line x1="400" y1="580" x2="900" y2="100" stroke="#6b6760" stroke-width="12" />
+    <line x1="600" y1="580" x2="1100" y2="100" stroke="#6b6760" stroke-width="12" />
+    <line x1="800" y1="580" x2="1300" y2="100" stroke="#6b6760" stroke-width="12" />
+    <line x1="500" y1="100" x2="1300" y2="100" stroke="#6b6760" stroke-width="10" />
+    <line x1="0" y1="580" x2="820" y2="580" stroke="#6b6760" stroke-width="10" />
+    <line x1="500" y1="100" x2="200" y2="580" stroke="#6b6760" stroke-width="6" />
+    <line x1="650" y1="100" x2="350" y2="580" stroke="#6b6760" stroke-width="6" />
+    <line x1="800" y1="100" x2="500" y2="580" stroke="#6b6760" stroke-width="6" />
+    <line x1="950" y1="100" x2="650" y2="580" stroke="#6b6760" stroke-width="6" />
+    <line x1="1100" y1="100" x2="800" y2="580" stroke="#6b6760" stroke-width="6" />
+  </svg>
 
   <div id="grid"></div>
 
