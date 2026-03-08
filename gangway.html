@@ -362,12 +362,24 @@
     async function loadCatalog() {
       try {
         const resp = await fetch(CATALOG_URL);
+        if (!resp.ok) throw new Error(resp.status);
         const data = await resp.json();
         data.forEach(addService);
         updateEmpty();
       } catch (e) {
-        console.error('Failed to load catalog:', e);
+        showOffline();
       }
+    }
+
+    function showOffline() {
+      grid.querySelectorAll('.card').forEach(c => c.remove());
+      services.clear();
+      const existing = grid.querySelector('#empty');
+      if (existing) existing.remove();
+      const el = document.createElement('div');
+      el.id = 'empty';
+      el.innerHTML = 'Harbor is not running.<br>Services will appear here once it starts.';
+      grid.appendChild(el);
     }
 
     function connectStream() {
@@ -376,6 +388,7 @@
       es.onopen = () => {
         sseDot.classList.add('connected');
         sseLabel.textContent = 'live';
+        loadCatalog(); // refresh on reconnect to catch any missed updates
       };
 
       es.onmessage = (e) => {
@@ -396,6 +409,7 @@
         sseDot.classList.remove('connected');
         sseLabel.textContent = 'reconnecting';
         es.close();
+        showOffline();
         setTimeout(connectStream, 3000);
       };
     }
