@@ -36,11 +36,13 @@ class CaddyBackend(ProxyBackend):
             self._upsert_route(f"static-{service.id}", route)
 
     def register(self, service: Service):
+        prefix = "static" if service.source == "file" else "ephemeral"
         route = render_route(service)
-        self._upsert_route(f"ephemeral-{service.id}", route)
+        self._upsert_route(f"{prefix}-{service.id}", route)
 
     def unregister(self, service: Service):
-        self.client.delete(f"/id/ephemeral-{service.id}")
+        prefix = "static" if service.source == "file" else "ephemeral"
+        self.client.delete(f"/id/{prefix}-{service.id}")
 
     def on_event(self, event: str, service: Service):
         if event == "registered":

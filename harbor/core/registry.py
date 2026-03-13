@@ -19,6 +19,17 @@ class Registry:
         for listener in self._listeners:
             listener(event, service)
 
+    def add_static(self, service: Service) -> None:
+        self.static[service.id] = service
+        self._emit("registered", service)
+
+    def remove_static(self, service_id: str) -> bool:
+        service = self.static.pop(service_id, None)
+        if service:
+            self._emit("unregistered", service)
+            return True
+        return False
+
     def register_dynamic(self, service: Service, ttl: int) -> Lease:
         token: str = secrets.token_hex(16)
         lease: Lease = Lease(

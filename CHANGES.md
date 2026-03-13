@@ -10,6 +10,9 @@ All notable changes to Harbor will be documented in this file.
 - Environment variable support for all configuration options (`HARBOR_BACKEND`, `HARBOR_BACKEND_URL`, `HARBOR_BACKEND_OPTIONS`, `HARBOR_STATIC_DIR`, `HARBOR_HOST`, `HARBOR_PORT`)
 - `create_app()` now callable without arguments, reads from environment — enables `harbor:app` as a Gunicorn entrypoint
 - SSE stream uses a 5 second queue timeout for clean Gunicorn shutdown and keepalive heartbeat
+- Hot-reload of static routes — changes to `.route` files in `routes.d/` are picked up automatically without restarting Harbor
+- `load_service` extracted from `load_services` for single-file loading
+- `Registry.add_static` and `Registry.remove_static` for runtime static service management
 
 ## [0.10.0] - 2026-03-08
 

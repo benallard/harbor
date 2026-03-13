@@ -13,6 +13,7 @@ from .core.registry import Registry  # noqa: E402
 from .core.loader import load_services  # noqa: E402
 from .backend.factory import create_backend  # noqa: E402
 from .tasks.gc import create_gc  # noqa: E402
+from .tasks.watcher import create_watcher  # noqa: E402
 from .api import services, catalog  # noqa: E402
 
 
@@ -84,6 +85,9 @@ def create_app(args=None):
 
     gc_thread = create_gc(registry)
     gc_thread.start()
+
+    watcher = create_watcher(registry, args.static_dir)
+    watcher.start()
 
     app.register_blueprint(services.create_bp(registry))
     app.register_blueprint(catalog.create_bp(registry))
