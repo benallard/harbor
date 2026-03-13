@@ -7,6 +7,7 @@ logging.basicConfig(
 
 import argparse  # noqa: E402
 from flask import Flask  # noqa: E402
+import os  # noqa: E402
 
 from .core.registry import Registry  # noqa: E402
 from .core.loader import load_services  # noqa: E402
@@ -57,8 +58,19 @@ def parse_args():
 
     return parser.parse_args()
 
+def default_config():
+    return argparse.Namespace(
+        backend=os.environ.get("HARBOR_BACKEND", "caddy"),
+        backend_url=os.environ.get("HARBOR_BACKEND_URL", "unix:///run/caddy/admin.socket"),
+        backend_options=os.environ.get("HARBOR_BACKEND_OPTIONS", "").split() or [],
+        static_dir=os.environ.get("HARBOR_STATIC_DIR", "/etc/harbor/routes.d"),
+        host=os.environ.get("HARBOR_HOST", "0.0.0.0"),
+        port=int(os.environ.get("HARBOR_PORT", "8080")),
+    )
 
-def create_app(args):
+def create_app(args=None):
+    if args is None:
+        args = default_config()
     app = Flask(__name__)
     static = load_services(args.static_dir)
     registry = Registry(static)

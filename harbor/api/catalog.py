@@ -59,8 +59,11 @@ def catalog_stream():
         try:
             yield ": connected\n\n" # flush headers immediatly
             while True:
-                payload = q.get()
-                yield f"data: {payload}\n\n"
+                try:
+                    payload = q.get(timeout=5)
+                    yield f"data: {payload}\n\n"
+                except queue.Empty:
+                    yield ": keepalive\n\n"
         except GeneratorExit:
             with _subscribers_lock:
                 _subscribers.remove(q)

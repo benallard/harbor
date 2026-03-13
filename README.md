@@ -183,16 +183,16 @@ poetry install
 poetry run harbor
 ```
 
-Key options:
+Key options — all available as CLI arguments or environment variables:
 
-```
---static-dir       Directory for .route files (default: /etc/harbor/routes.d)
---backend          Proxy backend: caddy or flask (default: caddy)
---backend-url      Backend admin URL or socket (default: unix:///run/caddy/admin.socket)
---backend-option   Backend-specific options, e.g. server-name=srv0
---host             Host to bind on (default: 0.0.0.0)
---port             Port to bind on (default: 8080)
-```
+| CLI | Env | Default |
+|---|---|---|
+| `--backend` | `HARBOR_BACKEND` | `caddy` |
+| `--backend-url` | `HARBOR_BACKEND_URL` | `unix:///run/caddy/admin.socket` |
+| `--backend-option` | `HARBOR_BACKEND_OPTIONS` | — |
+| `--static-dir` | `HARBOR_STATIC_DIR` | `/etc/harbor/routes.d` |
+| `--host` | `HARBOR_HOST` | `0.0.0.0` |
+| `--port` | `HARBOR_PORT` | `8080` |
 
 Development mode with embedded proxy:
 
@@ -204,11 +204,31 @@ poetry run harbor --backend flask
 
 ## Deployment
 
-SSE requires a threaded Gunicorn worker.
-Single worker keeps the SSE subscriber list consistent:
+Harbor is designed to run under Gunicorn with a threaded worker.
+SSE requires threading — a single worker keeps the subscriber list consistent across connections:
 
 ```
 gunicorn -k gthread --workers 1 --threads 16 harbor:app
+```
+
+Configuration is passed via environment variables.
+A minimal systemd service file:
+
+```ini
+[Unit]
+Description=Harbor service registry
+After=network.target caddy.service
+
+[Service]
+User=harbor
+Environment=HARBOR_BACKEND=caddy
+Environment=HARBOR_BACKEND_URL=unix:///run/caddy/admin.socket
+Environment=HARBOR_STATIC_DIR=/etc/harbor/routes.d
+ExecStart=gunicorn -k gthread --workers 1 --threads 16 harbor:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ---

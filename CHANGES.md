@@ -7,6 +7,9 @@ All notable changes to Harbor will be documented in this file.
 ### Harbor
 - Added `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Prefix`, `X-Real-IP`, `Host` and `Forwarded` (RFC 7239) headers to proxied requests
 - Applied consistently to both Caddy and Flask backends
+- Environment variable support for all configuration options (`HARBOR_BACKEND`, `HARBOR_BACKEND_URL`, `HARBOR_BACKEND_OPTIONS`, `HARBOR_STATIC_DIR`, `HARBOR_HOST`, `HARBOR_PORT`)
+- `create_app()` now callable without arguments, reads from environment — enables `harbor:app` as a Gunicorn entrypoint
+- SSE stream uses a 5 second queue timeout for clean Gunicorn shutdown and keepalive heartbeat
 
 ## [0.10.0] - 2026-03-08
 
