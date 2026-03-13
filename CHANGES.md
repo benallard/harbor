@@ -4,6 +4,10 @@ All notable changes to Harbor will be documented in this file.
 
 ## [Unreleased]
 
+### Harbor
+- Added `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Prefix`, `X-Real-IP`, `Host` and `Forwarded` (RFC 7239) headers to proxied requests
+- Applied consistently to both Caddy and Flask backends
+
 ## [0.10.0] - 2026-03-08
 
 ### Gangway

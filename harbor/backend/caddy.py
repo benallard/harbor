@@ -71,11 +71,14 @@ def render_route(service: Service) -> dict:
                     "headers": {
                         "request": {
                             "set": {
-                                "X-Forwarded-For": ["{http.request.remote.host}"],
-                                "X-Real-IP": ["{http.request.remote.host}"],
-                                "X-Forwarded-Proto": ["{http.request.scheme}"],
-                            }
-                        }
+                                "X-Forwarded-For":    ["{http.request.remote.host}"],
+                                "X-Forwarded-Proto":  ["{http.request.scheme}"],
+                                "X-Forwarded-Prefix": [service.prefix],
+                                "X-Real-IP":          ["{http.request.remote.host}"],
+                                "Host":               ["{http.request.host}"],
+                                "Forwarded":          ["for={http.request.remote.host};host={http.request.host};proto={http.request.scheme}"],
+                            },
+                        },
                     },
                 },
             ],
