@@ -5,9 +5,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def load_service(path: Path) -> Service:
     data = yaml.safe_load(path.read_text())
     return Service.from_dict(data, "file")
+
 
 def load_services(path):
     services = {}

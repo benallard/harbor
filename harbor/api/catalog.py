@@ -57,7 +57,7 @@ def catalog_stream():
         with _subscribers_lock:
             _subscribers.append(q)
         try:
-            yield ": connected\n\n" # flush headers immediatly
+            yield ": connected\n\n"  # flush headers immediatly
             while True:
                 try:
                     payload = q.get(timeout=5)

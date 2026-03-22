@@ -14,7 +14,9 @@ class Service:
     public_paths: Optional[List[str]] = None  # only these paths are proxied publicly
     name: Optional[str] = None  # human-friendly name
     icon: Optional[str] = None  # URL or path to an icon
-    priority: bool = False  # if true, this service is displayed with a special highlight
+    priority: bool = (
+        False  # if true, this service is displayed with a special highlight
+    )
     transcoder: Optional[dict] = None
     bff: Optional[dict] = None
 

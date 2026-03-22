@@ -13,6 +13,11 @@ All notable changes to Harbor will be documented in this file.
 - Hot-reload of static routes — changes to `.route` files in `routes.d/` are picked up automatically without restarting Harbor
 - `load_service` extracted from `load_services` for single-file loading
 - `Registry.add_static` and `Registry.remove_static` for runtime static service management
+- Envoy backend skeleton — file-based xDS, CDS and LDS generation (experimental, untested)
+- Multi-backend support — multiple backends can be subscribed to registry events simultaneously
+- `delegate` config option — backends can forward service kinds to other backends
+- `HarborConfig` and `BackendConfig` dataclasses in `core/config.py`
+- Config file support (`harbor.yaml`) with env var and CLI override layers
 
 ## [0.10.0] - 2026-03-08
 

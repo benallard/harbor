@@ -64,14 +64,16 @@ class FlaskProxyBackend(ProxyBackend):
         url = upstream.rstrip("/") + "/" + subpath
 
         headers = self._filtered_headers()
-        headers.update({
-            "X-Forwarded-For":    request.remote_addr,
-            "X-Forwarded-Proto":  request.scheme,
-            "X-Forwarded-Prefix": service.prefix,
-            "X-Real-IP":          request.remote_addr,
-            "Host":               request.host,
-            "Forwarded":          f"for={request.remote_addr};host={request.host};proto={request.scheme}",
-        })
+        headers.update(
+            {
+                "X-Forwarded-For": request.remote_addr,
+                "X-Forwarded-Proto": request.scheme,
+                "X-Forwarded-Prefix": service.prefix,
+                "X-Real-IP": request.remote_addr,
+                "Host": request.host,
+                "Forwarded": f"for={request.remote_addr};host={request.host};proto={request.scheme}",
+            }
+        )
 
         resp = self.client.request(
             method=request.method,
@@ -82,8 +84,15 @@ class FlaskProxyBackend(ProxyBackend):
             follow_redirects=False,
         )
 
-        excluded_resp = {"content-encoding", "content-length", "transfer-encoding", "connection"}
-        headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_resp]
+        excluded_resp = {
+            "content-encoding",
+            "content-length",
+            "transfer-encoding",
+            "connection",
+        }
+        headers = [
+            (k, v) for k, v in resp.headers.items() if k.lower() not in excluded_resp
+        ]
 
         return Response(resp.content, resp.status_code, headers)
 

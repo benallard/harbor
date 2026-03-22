@@ -3,7 +3,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 import yaml
 
@@ -48,7 +48,9 @@ class HarborConfig:
     def from_env() -> "HarborConfig":
         backends = {}
         backend_kind = os.environ.get("HARBOR_BACKEND", "caddy")
-        backend_url  = os.environ.get("HARBOR_BACKEND_URL", "unix:///run/caddy/admin.socket")
+        backend_url = os.environ.get(
+            "HARBOR_BACKEND_URL", "unix:///run/caddy/admin.socket"
+        )
         backend_opts = dict(
             o.split("=", 1)
             for o in os.environ.get("HARBOR_BACKEND_OPTIONS", "").split()
@@ -74,7 +76,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", help="Path to Harbor config file")
     parser.add_argument("--backend", default=None, choices=["caddy", "flask"])
     parser.add_argument("--backend-url", dest="backend_url", default=None)
-    parser.add_argument("--backend-option", dest="backend_options", action="append", default=[])
+    parser.add_argument(
+        "--backend-option", dest="backend_options", action="append", default=[]
+    )
     parser.add_argument("--static-dir", dest="static_dir", default=None)
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)

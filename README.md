@@ -284,8 +284,58 @@ upstreams:
   - 127.0.0.1:8080
 priority: true
 ```
+## Envoy backend (experimental)
 
----
+> The Envoy backend is a work in progress and has not been tested against a real Envoy instance.
+> The structure is in place but the xDS configuration will require iteration.
+
+Harbor supports Envoy as a second backend, primarily for gRPC services with JSON transcoding and BFF authentication.
+The typical deployment has Caddy as the front door, delegating gRPC routes to Envoy:
+```
+Client → Caddy :80 → Envoy :10000 → gRPC Service :9090
+```
+
+Envoy is configured via file-based xDS — Harbor writes `/run/envoy/cds.yaml` and `/run/envoy/lds.yaml` atomically, and Envoy picks up changes via inotify without restarting.
+
+A minimal Harbor config for this setup:
+```yaml
+static_dir: /etc/harbor/routes.d
+host: 0.0.0.0
+port: 8080
+
+backends:
+  caddy:
+    kind: caddy
+    url: unix:///run/caddy/admin.socket
+    options:
+      server-name: srv0
+    delegate:
+      grpc: envoy
+
+  envoy:
+    kind: envoy
+    options:
+      listener-port: 10000
+      admin-port: 9901
+```
+
+A gRPC service route:
+```yaml
+id: myservice
+name: My gRPC Service
+kind: grpc
+prefix: /api/myservice
+upstreams:
+  - 127.0.0.1:9090
+transcoder:
+  proto_descriptor: /etc/harbor/proto/myservice.pb
+  services:
+    - myservice.v1.MyService
+bff:
+  enabled: true
+```
+
+See `contrib/envoy-bootstrap.yaml` for the Envoy bootstrap configuration.
 
 ## Future: service widgets
 

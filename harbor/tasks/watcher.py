@@ -1,7 +1,12 @@
 import logging
 from pathlib import Path
 
-from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent, FileDeletedEvent
+from watchdog.events import (
+    FileSystemEventHandler,
+    FileCreatedEvent,
+    FileModifiedEvent,
+    FileDeletedEvent,
+)
 from watchdog.observers import Observer
 
 from ..core.registry import Registry
