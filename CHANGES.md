@@ -2,7 +2,7 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [Unreleased]
+## [0.11.0] - 2026-03-22
 
 ### Harbor
 - Added `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Prefix`, `X-Real-IP`, `Host` and `Forwarded` (RFC 7239) headers to proxied requests
