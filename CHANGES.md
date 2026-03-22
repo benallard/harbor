@@ -2,7 +2,7 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [unreleased]
+## [0.12.0] - 2026-03-22
 
 ### Harbor
 - `harbor/wsgi.py` added as Gunicorn entry point (`harbor.wsgi:app`) to avoid naming conflict between `harbor/app.py` and `harbor/__init__.py`
