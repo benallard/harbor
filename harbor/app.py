@@ -7,13 +7,13 @@ logging.basicConfig(
 
 from flask import Flask  # noqa: E402
 from .core.config import HarborConfig, load_config  # noqa: E402
+from .core.dispatcher import Dispatcher  # noqa: E402
 from .core.registry import Registry  # noqa: E402
 from .core.loader import load_services  # noqa: E402
 from .backend.factory import create_backend  # noqa: E402
 from .tasks.gc import create_gc  # noqa: E402
 from .tasks.watcher import create_watcher  # noqa: E402
 from .api import services, catalog  # noqa: E402
-
 
 def create_app(config: HarborConfig = None):
     if config is None:
@@ -23,19 +23,19 @@ def create_app(config: HarborConfig = None):
     static = load_services(config.static_dir)
     registry = Registry(static)
 
-    backends = [
-        create_backend(app, name, backend_config)
+    # create all backends
+    backend_instances = {
+        name: create_backend(app, name, backend_config)
         for name, backend_config in config.backends.items()
-    ]
+    }
 
-    for backend in backends:
-        registry.subscribe(backend.on_event)
-
+    # build dispatcher and subscribe it to registry
+    dispatcher = Dispatcher(config, backend_instances)
+    registry.subscribe(dispatcher.dispatch)
     registry.subscribe(catalog.notify_subscribers)
 
-    # Initial load
-    for backend in backends:
-        backend.apply(list(registry.static.values()))
+    # apply static services
+    dispatcher.apply(list(registry.static.values()))
 
     gc_thread = create_gc(registry)
     gc_thread.start()

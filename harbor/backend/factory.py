@@ -8,18 +8,18 @@ from .flask_proxy import FlaskProxyBackend
 
 logger = logging.getLogger(__name__)
 
+BACKENDS = {
+    "caddy": CaddyBackend,
+    "envoy": EnvoyBackend,
+    "flask": FlaskProxyBackend,
+}
+
 
 def create_backend(app, name: str, config: BackendConfig) -> ProxyBackend:
     logger.info("Creating backend %s (%s) at %s", name, config.kind, config.url)
-
-    if config.kind == "caddy":
-        server_name = config.options.get("server-name", "srv0")
-        return CaddyBackend(config.url, server_name=server_name)
-
-    if config.kind == "envoy":
-        return EnvoyBackend(config)
-
+    cls = BACKENDS.get(config.kind)
+    if cls is None:
+        raise RuntimeError(f"Unsupported backend: {config.kind}")
     if config.kind == "flask":
-        return FlaskProxyBackend(app)
-
-    raise RuntimeError(f"Unsupported backend: {config.kind}")
+        return cls(app, config)
+    return cls(config)

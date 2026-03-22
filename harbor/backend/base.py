@@ -20,3 +20,12 @@ class ProxyBackend:
         Meant to be called when a service is removed over the API, or its lease expires.
         """
         raise NotImplementedError
+
+    
+    @property
+    def listener_url(self) -> str:
+        """
+        Get the URL of the backend's listener.
+        This is used for delegation — services of delegated kinds are transformed into proxies to this URL.
+        """
+        raise NotImplementedError

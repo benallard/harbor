@@ -1,17 +1,34 @@
+from dataclasses import dataclass
+
 import httpx
 import logging
+
+from ..core.config import BackendConfig
 from .base import ProxyBackend
 from ..core.models import Service
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class CaddyConfig:
+    server_name: str = "srv0"
+    listener_port: int = 80
+
+    @staticmethod
+    def from_backend_config(config: BackendConfig) -> "CaddyConfig":
+        return CaddyConfig(
+            server_name=config.options.get("server-name", "srv0"),
+            listener_port=int(config.options.get("listener-port", 80)),
+        )
 
 class CaddyBackend(ProxyBackend):
 
-    def __init__(self, admin_url: str, server_name: str = "srv0"):
-        self.server_name = server_name
+    def __init__(self, config: BackendConfig):
+        self.config = CaddyConfig.from_backend_config(config)
+        admin_url = config.url
+
         if admin_url.startswith("unix://"):
-            socket_path = admin_url[len("unix://") :]
+            socket_path = admin_url[len("unix://"):]
             transport = httpx.HTTPTransport(uds=socket_path)
             self.client = httpx.Client(transport=transport, base_url="http://caddy")
         else:
@@ -23,7 +40,7 @@ class CaddyBackend(ProxyBackend):
         if response.status_code == 404:
             logger.debug("Creating new route %s for service %s", route_id, route)
             self.client.put(
-                f"/config/apps/http/servers/{self.server_name}/routes/0", json=route
+                f"/config/apps/http/servers/{self.config.server_name}/routes/0", json=route
             )
         else:
             logger.debug("Updating route %s for service %s", route_id, route)
@@ -53,6 +70,10 @@ class CaddyBackend(ProxyBackend):
             logger.warning(
                 "CaddyBackend: unknown event %s for service %s", event, service.id
             )
+    
+    @property
+    def listener_url(self) -> str:
+        return f"127.0.0.1:{self.config.listener_port}"
 
 
 def render_route(service: Service) -> dict:

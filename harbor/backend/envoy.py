@@ -2,6 +2,8 @@ import logging
 import os
 import json
 from pathlib import Path
+
+from dataclasses import dataclass
 from .base import ProxyBackend
 from ..core.models import Service
 from ..core.config import BackendConfig
@@ -12,11 +14,22 @@ ENVOY_RUN_DIR = Path("/run/envoy")
 CDS_PATH = ENVOY_RUN_DIR / "cds.yaml"
 LDS_PATH = ENVOY_RUN_DIR / "lds.yaml"
 
+@dataclass
+class EnvoyConfig:
+    listener_port: int = 10000
+    admin_port: int = 9901
 
+    @staticmethod
+    def from_backend_config(config: BackendConfig) -> "EnvoyConfig":
+        return EnvoyConfig(
+            listener_port=int(config.options.get("listener-port", 10000)),
+            admin_port=int(config.options.get("admin-port", 9901)),
+        )
+    
 class EnvoyBackend(ProxyBackend):
 
     def __init__(self, config: BackendConfig):
-        self.config = config
+        self.config = EnvoyConfig.from_backend_config(config)
         self.clusters = {}  # service_id → cluster config
         self.routes = {}  # service_id → route config
         ENVOY_RUN_DIR.mkdir(parents=True, exist_ok=True)
@@ -58,7 +71,7 @@ class EnvoyBackend(ProxyBackend):
                             "socket_address": {
                                 "address": "0.0.0.0",
                                 "port_value": int(
-                                    self.config.options.get("listener-port", 10000)
+                                    self.config.listener_port
                                 ),
                             }
                         },

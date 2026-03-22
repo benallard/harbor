@@ -23,6 +23,7 @@ class HarborConfig:
     static_dir: str = "/etc/harbor/routes.d"
     host: str = "0.0.0.0"
     port: int = 8080
+    ingress: str = "default"
     backends: Dict[str, BackendConfig] = field(default_factory=dict)
 
     @staticmethod
@@ -41,6 +42,7 @@ class HarborConfig:
             static_dir=data.get("static_dir", "/etc/harbor/routes.d"),
             host=data.get("host", "0.0.0.0"),
             port=data.get("port", 8080),
+            ingress=data.get("ingress", "default"),
             backends=backends,
         )
 
@@ -65,6 +67,7 @@ class HarborConfig:
             static_dir=os.environ.get("HARBOR_STATIC_DIR", "/etc/harbor/routes.d"),
             host=os.environ.get("HARBOR_HOST", "0.0.0.0"),
             port=int(os.environ.get("HARBOR_PORT", "8080")),
+            ingress="default",
             backends=backends,
         )
 
