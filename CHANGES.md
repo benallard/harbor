@@ -2,6 +2,8 @@
 
 All notable changes to Harbor will be documented in this file.
 
+## [unreleased]
+
 ## [0.11.0] - 2026-03-22
 
 ### Harbor
