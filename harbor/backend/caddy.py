@@ -9,6 +9,7 @@ from ..core.models import Service
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CaddyConfig:
     server_name: str = "srv0"
@@ -21,6 +22,7 @@ class CaddyConfig:
             listener_port=int(config.options.get("listener-port", 80)),
         )
 
+
 class CaddyBackend(ProxyBackend):
 
     def __init__(self, config: BackendConfig):
@@ -28,7 +30,7 @@ class CaddyBackend(ProxyBackend):
         admin_url = config.url
 
         if admin_url.startswith("unix://"):
-            socket_path = admin_url[len("unix://"):]
+            socket_path = admin_url[len("unix://") :]
             transport = httpx.HTTPTransport(uds=socket_path)
             self.client = httpx.Client(transport=transport, base_url="http://caddy")
         else:
@@ -40,7 +42,8 @@ class CaddyBackend(ProxyBackend):
         if response.status_code == 404:
             logger.debug("Creating new route %s for service %s", route_id, route)
             self.client.put(
-                f"/config/apps/http/servers/{self.config.server_name}/routes/0", json=route
+                f"/config/apps/http/servers/{self.config.server_name}/routes/0",
+                json=route,
             )
         else:
             logger.debug("Updating route %s for service %s", route_id, route)
@@ -70,7 +73,7 @@ class CaddyBackend(ProxyBackend):
             logger.warning(
                 "CaddyBackend: unknown event %s for service %s", event, service.id
             )
-    
+
     @property
     def listener_url(self) -> str:
         return f"127.0.0.1:{self.config.listener_port}"

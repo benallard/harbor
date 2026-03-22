@@ -1,7 +1,6 @@
 import logging
 from .config import HarborConfig
 from .models import Service
-from ..proxy.base import ProxyBackend
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +35,14 @@ class Dispatcher:
             transformed = self._transform(service, delegate_backend)
             logger.debug(
                 "Dispatching %s to ingress %s as proxy → %s",
-                service.id, ingress_name, delegate_name
+                service.id,
+                ingress_name,
+                delegate_name,
             )
             ingress_backend.on_event(event, transformed)
 
             # dispatch original service to delegate
-            logger.debug(
-                "Dispatching %s to delegate %s",
-                service.id, delegate_name
-            )
+            logger.debug("Dispatching %s to delegate %s", service.id, delegate_name)
             self.backends[delegate_name].on_event(event, service)
 
         else:
@@ -53,6 +51,7 @@ class Dispatcher:
 
     def _transform(self, service: Service, delegate_backend) -> Service:
         from dataclasses import replace
+
         return replace(
             service,
             kind="proxy",

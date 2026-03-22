@@ -12,8 +12,14 @@ def load_service(path: Path) -> Service:
 
 
 def load_services(path):
+    p = Path(path)
+    if not p.exists():
+        logger.warning(
+            "Static dir %s does not exist, starting with no static services", path
+        )
+        return {}
     services = {}
-    for f in Path(path).glob("*.route"):
+    for f in p.glob("*.route"):
         try:
             service = load_service(f)
             logger.info("Loaded static service: %s at %s", service.id, service.prefix)

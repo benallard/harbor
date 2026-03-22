@@ -3,6 +3,7 @@ import json
 from pytest_httpx import HTTPXMock
 from harbor.backend.caddy import CaddyBackend
 from harbor.core.models import Service
+from harbor.core.config import BackendConfig
 
 
 def make_service(id, kind="proxy", prefix="/test"):
@@ -18,7 +19,7 @@ def make_service(id, kind="proxy", prefix="/test"):
 
 @pytest.fixture
 def backend():
-    return CaddyBackend("http://localhost:2019")
+    return CaddyBackend(BackendConfig(kind="caddy", url="http://localhost:2019"))
 
 
 def test_register_new_proxy_service(backend, httpx_mock: HTTPXMock):

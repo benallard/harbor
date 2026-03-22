@@ -1,14 +1,28 @@
+from dataclasses import dataclass
 import httpx
 
 from flask import request, Response, send_from_directory, abort
 
 from .base import ProxyBackend
+from ..core.config import BackendConfig
+
+
+@dataclass
+class FlaskConfig:
+    listener_port: int = 8080
+
+    @staticmethod
+    def from_backend_config(config: BackendConfig) -> "FlaskConfig":
+        return FlaskConfig(
+            listener_port=int(config.options.get("listener-port", 8080)),
+        )
 
 
 class FlaskProxyBackend(ProxyBackend):
 
-    def __init__(self, app):
+    def __init__(self, app, config: BackendConfig):
         self.app = app
+        self.config = FlaskConfig.from_backend_config(config)
         self.router = Router()
         self.client = httpx.Client()
         self._install_gateway()
@@ -95,6 +109,14 @@ class FlaskProxyBackend(ProxyBackend):
         ]
 
         return Response(resp.content, resp.status_code, headers)
+
+    def _filtered_headers(self):
+        excluded = {"host", "content-length"}
+        return {k: v for k, v in request.headers if k.lower() not in excluded}
+
+    @property
+    def listener_url(self) -> str:
+        return f"127.0.0.1:{self.config.listener_port}"
 
 
 class Router:

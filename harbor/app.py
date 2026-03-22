@@ -15,6 +15,7 @@ from .tasks.gc import create_gc  # noqa: E402
 from .tasks.watcher import create_watcher  # noqa: E402
 from .api import services, catalog  # noqa: E402
 
+
 def create_app(config: HarborConfig = None):
     if config is None:
         config = load_config()
@@ -41,7 +42,8 @@ def create_app(config: HarborConfig = None):
     gc_thread.start()
 
     watcher = create_watcher(registry, config.static_dir)
-    watcher.start()
+    if watcher:
+        watcher.start()
 
     app.register_blueprint(services.create_bp(registry))
     app.register_blueprint(catalog.create_bp(registry))

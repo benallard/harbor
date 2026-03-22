@@ -1,31 +1,28 @@
-import argparse
 import pytest
 from unittest.mock import MagicMock
 from harbor.app import create_app
-from harbor.backend.flask_proxy import FlaskProxyBackend
+from harbor.core.config import HarborConfig, BackendConfig
 
 
 @pytest.fixture
 def mock_backend():
     backend = MagicMock()
-    backend.on_event = MagicMock()
-    backend.apply = MagicMock()
-    backend.register = MagicMock()
-    backend.unregister = MagicMock()
+    backend.listener_url = "127.0.0.1:80"
     return backend
 
 
 @pytest.fixture
-def app(mock_backend, monkeypatch):
-    monkeypatch.setattr("harbor.app.create_backend", lambda *a, **kw: mock_backend)
-
-    args = argparse.Namespace(
-        backend="caddy",
-        backend_url="http://localhost:2019",
-        backend_options=[],
-        static_dir="tests/fixtures/routes.d",
+def app(monkeypatch, mock_backend):
+    # Patch it were it's being used, not where it's defined
+    monkeypatch.setattr(
+        "harbor.app.create_backend", lambda app, name, config: mock_backend
     )
-    app = create_app(args)
+    config = HarborConfig(
+        static_dir="tests/fixtures/routes.d",
+        backends={"default": BackendConfig(kind="caddy", url="http://localhost:2019")},
+        ingress="default",
+    )
+    app = create_app(config)
     app.config["TESTING"] = True
     return app
 
@@ -36,18 +33,13 @@ def client(app):
 
 
 @pytest.fixture
-def flask_app(monkeypatch):
-    monkeypatch.setattr(
-        "harbor.app.create_backend", lambda *a, **kw: FlaskProxyBackend(a[0])
-    )
-
-    args = argparse.Namespace(
-        backend="flask",
-        backend_url="",
-        backend_options=[],
+def flask_app():
+    config = HarborConfig(
         static_dir="tests/fixtures/routes.d",
+        backends={"default": BackendConfig(kind="flask", url="")},
+        ingress="default",
     )
-    app = create_app(args)
+    app = create_app(config)
     app.config["TESTING"] = True
     return app
 

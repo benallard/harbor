@@ -56,6 +56,10 @@ class RouteFileHandler(FileSystemEventHandler):
 
 
 def create_watcher(registry: Registry, static_dir: str) -> Observer:
+    p = Path(static_dir)
+    if not p.exists():
+        logger.warning("Static dir %s does not exist, watcher not started", static_dir)
+        return None
     handler = RouteFileHandler(registry)
     observer = Observer()
     observer.schedule(handler, static_dir, recursive=False)

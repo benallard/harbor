@@ -14,6 +14,7 @@ ENVOY_RUN_DIR = Path("/run/envoy")
 CDS_PATH = ENVOY_RUN_DIR / "cds.yaml"
 LDS_PATH = ENVOY_RUN_DIR / "lds.yaml"
 
+
 @dataclass
 class EnvoyConfig:
     listener_port: int = 10000
@@ -25,7 +26,8 @@ class EnvoyConfig:
             listener_port=int(config.options.get("listener-port", 10000)),
             admin_port=int(config.options.get("admin-port", 9901)),
         )
-    
+
+
 class EnvoyBackend(ProxyBackend):
 
     def __init__(self, config: BackendConfig):
@@ -70,9 +72,7 @@ class EnvoyBackend(ProxyBackend):
                         "address": {
                             "socket_address": {
                                 "address": "0.0.0.0",
-                                "port_value": int(
-                                    self.config.listener_port
-                                ),
+                                "port_value": int(self.config.listener_port),
                             }
                         },
                         "filter_chains": [

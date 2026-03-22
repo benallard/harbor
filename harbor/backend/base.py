@@ -21,7 +21,6 @@ class ProxyBackend:
         """
         raise NotImplementedError
 
-    
     @property
     def listener_url(self) -> str:
         """
