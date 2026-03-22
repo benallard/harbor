@@ -208,28 +208,11 @@ Harbor is designed to run under Gunicorn with a threaded worker.
 SSE requires threading — a single worker keeps the subscriber list consistent across connections:
 
 ```
-gunicorn -k gthread --workers 1 --threads 16 harbor:app
+gunicorn -k gthread --workers 1 --threads 16 harbor.wsgi:app
 ```
 
 Configuration is passed via environment variables.
-A minimal systemd service file:
-
-```ini
-[Unit]
-Description=Harbor service registry
-After=network.target caddy.service
-
-[Service]
-User=harbor
-Environment=HARBOR_BACKEND=caddy
-Environment=HARBOR_BACKEND_URL=unix:///run/caddy/admin.socket
-Environment=HARBOR_STATIC_DIR=/etc/harbor/routes.d
-ExecStart=gunicorn -k gthread --workers 1 --threads 16 harbor:app
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
+A minimal systemd service file can be found in the `contrib/` directory.
 
 ---
 

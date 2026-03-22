@@ -4,6 +4,15 @@ All notable changes to Harbor will be documented in this file.
 
 ## [unreleased]
 
+### Harbor
+- `harbor/wsgi.py` added as Gunicorn entry point (`harbor.wsgi:app`) to avoid naming conflict between `harbor/app.py` and `harbor/__init__.py`
+- Dispatcher introduced in `core/dispatcher.py` — owns delegation logic, backends no longer subscribed directly to registry
+- `ingress` field added to `HarborConfig` — names the front-row backend that receives all service events
+- Backend-specific config dataclasses — `CaddyConfig`, `EnvoyConfig`, `FlaskConfig`
+- `listener_url` property on `ProxyBackend` base class
+- `factory.py` simplified to a backend registry dict
+- Static dir and watcher handle missing directory gracefully instead of crashing
+
 ## [0.11.0] - 2026-03-22
 
 ### Harbor
