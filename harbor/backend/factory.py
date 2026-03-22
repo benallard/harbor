@@ -3,6 +3,7 @@ import logging
 from ..core.config import BackendConfig
 from .base import ProxyBackend
 from .caddy import CaddyBackend
+from .envoy import EnvoyBackend
 from .flask_proxy import FlaskProxyBackend
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,9 @@ def create_backend(app, name: str, config: BackendConfig) -> ProxyBackend:
     if config.kind == "caddy":
         server_name = config.options.get("server-name", "srv0")
         return CaddyBackend(config.url, server_name=server_name)
+
+    if config.kind == "envoy":
+        return EnvoyBackend(config)
 
     if config.kind == "flask":
         return FlaskProxyBackend(app)

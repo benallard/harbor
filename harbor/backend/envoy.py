@@ -45,10 +45,84 @@ class EnvoyBackend(ProxyBackend):
     def _add(self, service: Service):
         self.clusters[service.id] = render_cluster(service)
         self.routes[service.id] = render_route(service)
-
+        
     def _write(self):
-        _atomic_write(CDS_PATH, {"resources": list(self.clusters.values())})
-        _atomic_write(LDS_PATH, {"resources": list(self.routes.values())})
+        _atomic_write(CDS_PATH, {
+            "resources": list(self.clusters.values())
+        })
+        _atomic_write(LDS_PATH, {
+            "resources": [{
+                "@type": "type.googleapis.com/envoy.config.listener.v3.Listener",
+                "name": "harbor",
+                "address": {
+                    "socket_address": {
+                        "address": "0.0.0.0",
+                        "port_value": int(self.config.options.get("listener-port", 10000))
+                    }
+                },
+                "filter_chains": [{
+                    "filters": [{
+                        "name": "envoy.filters.network.http_connection_manager",
+                        "typed_config": {
+                            "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                            "stat_prefix": "harbor",
+                            "http_filters": self._build_http_filters(),
+                            "route_config": {
+                                "virtual_hosts": [{
+                                    "name": "local",
+                                    "domains": ["*"],
+                                    "routes": list(self.routes.values())
+                                }]
+                            }
+                        }
+                    }]
+                }]
+            }]
+        })
+
+
+    def _build_http_filters(self) -> list:
+        filters = []
+
+        if any(s.get("typed_per_filter_config") for s in self.routes.values()):
+            filters.append({
+                "name": "envoy.filters.http.grpc_json_transcoder",
+                "typed_config": {
+                    "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
+                    "proto_descriptor": "",
+                    "services": []
+                }
+            })
+
+        if self._has_bff():
+            filters.append({
+                "name": "envoy.filters.http.ext_authz",
+                "typed_config": {
+                    "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                    "grpc_service": {
+                        "envoy_grpc": {
+                            "cluster_name": "bff"
+                        }
+                    }
+                }
+            })
+
+        filters.append({
+            "name": "envoy.filters.http.router",
+            "typed_config": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+            }
+        })
+
+        return filters
+
+
+    def _has_bff(self) -> bool:
+        return any(
+            s.get("bff", {}).get("enabled")
+            for s in self.routes.values()
+            if isinstance(s, dict)
+        )
 
 
 def _atomic_write(path: Path, data: dict):
@@ -58,8 +132,65 @@ def _atomic_write(path: Path, data: dict):
 
 
 def render_cluster(service: Service) -> dict:
-    pass
+    upstream = service.upstreams[0]
+    host, port = upstream.rsplit(":", 1)
+
+    cluster = {
+        "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+        "name": service.id,
+        "type": "STRICT_DNS",
+        "load_assignment": {
+            "cluster_name": service.id,
+            "endpoints": [{
+                "lb_endpoints": [{
+                    "endpoint": {
+                        "address": {
+                            "socket_address": {
+                                "address": host,
+                                "port_value": int(port),
+                            }
+                        }
+                    }
+                }]
+            }]
+        }
+    }
+
+    if service.kind == "grpc":
+        cluster["typed_extension_protocol_options"] = {
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
+                "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
+                "explicit_http_config": {
+                    "http2_protocol_options": {}
+                }
+            }
+        }
+
+    return cluster
 
 
 def render_route(service: Service) -> dict:
-    pass
+    route = {
+        "match": {
+            "prefix": service.prefix
+        },
+        "route": {
+            "cluster": service.id,
+            "prefix_rewrite": "/",
+        }
+    }
+
+    if service.transcoder:
+        route["typed_per_filter_config"] = {
+            "envoy.filters.http.grpc_json_transcoder": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
+                "proto_descriptor": service.transcoder["proto_descriptor"],
+                "services": service.transcoder["services"],
+                "print_options": {
+                    "add_whitespace": True,
+                    "always_print_primitive_fields": True,
+                }
+            }
+        }
+
+    return route

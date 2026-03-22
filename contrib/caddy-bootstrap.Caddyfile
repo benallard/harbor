@@ -1,0 +1,10 @@
+{
+    admin unix//run/caddy/admin.socket|0660
+}
+
+:80 {
+    try_files {path} /index.html
+    file_server {
+        root /var/www/bridge
+    }
+}
