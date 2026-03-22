@@ -1,14 +1,21 @@
+import logging
+
+from ..core.config import BackendConfig
+from .base import ProxyBackend
 from .caddy import CaddyBackend
 from .flask_proxy import FlaskProxyBackend
 
+logger = logging.getLogger(__name__)
 
-def create_backend(app, backend, url, options):
-    opts = dict(o.split("=", 1) for o in options)
 
-    if backend == "caddy":
-        return CaddyBackend(url, server_name=opts.get("server-name", "srv0"))
+def create_backend(app, name: str, config: BackendConfig) -> ProxyBackend:
+    logger.info("Creating backend %s (%s) at %s", name, config.kind, config.url)
 
-    if backend == "flask":
+    if config.kind == "caddy":
+        server_name = config.options.get("server-name", "srv0")
+        return CaddyBackend(config.url, server_name=server_name)
+
+    if config.kind == "flask":
         return FlaskProxyBackend(app)
 
-    raise RuntimeError(f"Unsupported backend: {backend}")
+    raise RuntimeError(f"Unsupported backend: {config.kind}")

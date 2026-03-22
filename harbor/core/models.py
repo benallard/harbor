@@ -15,6 +15,8 @@ class Service:
     name: Optional[str] = None  # human-friendly name
     icon: Optional[str] = None  # URL or path to an icon
     priority: bool = False  # if true, this service is displayed with a special highlight
+    transcoder: Optional[dict] = None
+    bff: Optional[dict] = None
 
     def from_dict(data: dict, source: str) -> "Service":
         return Service(
