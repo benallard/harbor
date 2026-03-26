@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 from harbor.core.dispatcher import Dispatcher
 from harbor.core.config import HarborConfig, BackendConfig
@@ -19,7 +18,7 @@ def make_config(envoy_features=None):
                 options={"listener-port": "10000"},
                 features=envoy_features or [],
             ),
-        }
+        },
     )
 
 
@@ -44,6 +43,7 @@ def make_service(bff=None, transcoder=None):
 
 
 # --- apply ---
+
 
 def test_apply_no_features():
     config = make_config()
@@ -74,7 +74,14 @@ def test_apply_with_transcoder():
     backends = make_backends()
     dispatcher = Dispatcher(config, backends)
 
-    services = [make_service(transcoder={"proto_descriptor": "/etc/harbor/proto/svc.pb", "services": ["svc.v1.Svc"]})]
+    services = [
+        make_service(
+            transcoder={
+                "proto_descriptor": "/etc/harbor/proto/svc.pb",
+                "services": ["svc.v1.Svc"],
+            }
+        )
+    ]
     dispatcher.apply(services)
 
     backends["caddy"].apply.assert_called_once()
@@ -82,6 +89,7 @@ def test_apply_with_transcoder():
 
 
 # --- dispatch ---
+
 
 def test_dispatch_no_features():
     config = make_config()
@@ -118,7 +126,12 @@ def test_dispatch_with_transcoder():
     backends = make_backends()
     dispatcher = Dispatcher(config, backends)
 
-    service = make_service(transcoder={"proto_descriptor": "/etc/harbor/proto/svc.pb", "services": ["svc.v1.Svc"]})
+    service = make_service(
+        transcoder={
+            "proto_descriptor": "/etc/harbor/proto/svc.pb",
+            "services": ["svc.v1.Svc"],
+        }
+    )
     dispatcher.dispatch("registered", service)
 
     caddy_call = backends["caddy"].on_event.call_args

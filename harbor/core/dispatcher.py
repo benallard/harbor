@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+
 from .config import HarborConfig
 from .models import Service
 
@@ -15,20 +17,18 @@ class Dispatcher:
         ingress = self.backends[self.config.ingress]
         ingress.apply(services)
 
-        # apply delegated services to their respective backends
-        ingress_config = self.config.backends[self.config.ingress]
         for service in services:
-            delegate_name = ingress_config.delegate.get(service.kind)
+            delegate_name = self._find_delegate(service)
             if delegate_name:
                 self.backends[delegate_name].apply([service])
-                
+
     def _find_delegate(self, service: Service) -> Optional[str]:
         service_features = set()
         if service.transcoder:
             service_features.add("transcoder")
         if service.bff:
             service_features.add("bff")
-        
+
         if not service_features:
             return None
 
@@ -46,8 +46,12 @@ class Dispatcher:
         if delegate_name:
             delegate_backend = self.backends[delegate_name]
             transformed = self._transform(service, delegate_backend)
-            logger.debug("Dispatching %s to ingress %s as proxy → %s",
-                        service.id, self.config.ingress, delegate_name)
+            logger.debug(
+                "Dispatching %s to ingress %s as proxy → %s",
+                service.id,
+                self.config.ingress,
+                delegate_name,
+            )
             ingress_backend.on_event(event, transformed)
             logger.debug("Dispatching %s to delegate %s", service.id, delegate_name)
             delegate_backend.on_event(event, service)
