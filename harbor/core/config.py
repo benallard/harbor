@@ -15,7 +15,7 @@ class BackendConfig:
     kind: str
     url: str
     options: Dict[str, str] = field(default_factory=dict)
-    delegate: Dict[str, str] = field(default_factory=dict)
+    features: List[str] = field(default_factory=list)
 
 
 @dataclass

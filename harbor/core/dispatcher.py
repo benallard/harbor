@@ -21,32 +21,37 @@ class Dispatcher:
             delegate_name = ingress_config.delegate.get(service.kind)
             if delegate_name:
                 self.backends[delegate_name].apply([service])
+                
+    def _find_delegate(self, service: Service) -> Optional[str]:
+        service_features = set()
+        if service.transcoder:
+            service_features.add("transcoder")
+        if service.bff:
+            service_features.add("bff")
+        
+        if not service_features:
+            return None
+
+        for name, config in self.config.backends.items():
+            if name == self.config.ingress:
+                continue
+            if any(f in config.features for f in service_features):
+                return name
+        return None
 
     def dispatch(self, event: str, service: Service):
-        ingress_name = self.config.ingress
-        ingress_config = self.config.backends[ingress_name]
-        ingress_backend = self.backends[ingress_name]
-
-        delegate_name = ingress_config.delegate.get(service.kind)
+        ingress_backend = self.backends[self.config.ingress]
+        delegate_name = self._find_delegate(service)
 
         if delegate_name:
-            # transform service for ingress — proxy to delegate's listener
             delegate_backend = self.backends[delegate_name]
             transformed = self._transform(service, delegate_backend)
-            logger.debug(
-                "Dispatching %s to ingress %s as proxy → %s",
-                service.id,
-                ingress_name,
-                delegate_name,
-            )
+            logger.debug("Dispatching %s to ingress %s as proxy → %s",
+                        service.id, self.config.ingress, delegate_name)
             ingress_backend.on_event(event, transformed)
-
-            # dispatch original service to delegate
             logger.debug("Dispatching %s to delegate %s", service.id, delegate_name)
-            self.backends[delegate_name].on_event(event, service)
-
+            delegate_backend.on_event(event, service)
         else:
-            # no delegation — ingress handles it directly
             ingress_backend.on_event(event, service)
 
     def _transform(self, service: Service, delegate_backend) -> Service:
