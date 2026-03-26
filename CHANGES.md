@@ -4,6 +4,13 @@ All notable changes to Harbor will be documented in this file.
 
 ## [unreleased]
 
+## Harbor
+- Feature-based delegation — services declare capabilities (`bff`, `transcoder`) via structured fields, backends declare what they provide via `features` list in config
+- `kind=grpc` removed — plain `kind=proxy` covers gRPC, `transcoder` field signals transcoding need
+- `delegate` map removed from `BackendConfig` — replaced by `features` list
+- `Dispatcher._find_delegate` derives required features from service fields rather than explicit feature list
+- `Dispatcher.apply` updated to use feature-based delegation
+
 ## [0.12.0] - 2026-03-22
 
 ### Harbor
