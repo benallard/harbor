@@ -2,7 +2,7 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [unreleased]
+## [0.13.0] - 2026-03-26
 
 ## Harbor
 - Feature-based delegation — services declare capabilities (`bff`, `transcoder`) via structured fields, backends declare what they provide via `features` list in config
