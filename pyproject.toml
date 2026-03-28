@@ -22,6 +22,10 @@ black = "^24.0"
 ruff = "^0.4"
 pytest-httpx = "^0.35"
 
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6"
+mkdocs-material = "^9.5"
+
 [tool.poetry.scripts]
 harbor = "harbor.app:main"
 
