@@ -4,9 +4,7 @@ After=network.target caddy.service
 
 [Service]
 User=harbor
-Environment=HARBOR_BACKEND=caddy
-Environment=HARBOR_BACKEND_URL=unix:///run/caddy/admin.socket
-Environment=HARBOR_STATIC_DIR=/etc/harbor/routes.d
+Environment=HARBOR_CONFIG=/etc/harbor/config.yaml
 ExecStart=gunicorn -k gthread --workers 1 --threads 16 harbor.wsgi:app
 Restart=on-failure
 
