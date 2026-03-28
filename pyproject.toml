@@ -30,7 +30,7 @@ mkdocs-material = "^9.5"
 harbor = "harbor.app:main"
 
 [tool.poetry.urls]
-Homepage = "https://github.com/benallard/harbor"
+Homepage = "https://benallard.github.io/harbor/"
 Repository = "https://github.com/benallard/harbor"
 
 [build-system]
