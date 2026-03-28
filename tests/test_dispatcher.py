@@ -60,6 +60,7 @@ def make_dispatcher(config, backends, sidecars_for=None):
 
 # --- apply ---
 
+
 def test_apply_no_sidecars():
     config = make_config()
     backends = make_backends()
@@ -99,6 +100,7 @@ def test_apply_with_transcoder_sidecar():
 
 
 # --- dispatch ---
+
 
 def test_dispatch_no_sidecars():
     config = make_config()
@@ -187,6 +189,7 @@ def test_dispatch_no_sidecars_goes_to_ingress_only():
 
 
 # --- sidecar dispatch ---
+
 
 def test_dispatch_sidecar_to_capable_backend():
     config = make_config(envoy_features=["authz"])

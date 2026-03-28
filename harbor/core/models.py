@@ -6,7 +6,7 @@ from typing import Optional, List
 class Service:
     id: str
     kind: str  # "proxy", "static", "sidecar"
-    prefix: Optional[str] = None # for "proxy" and "static" services
+    prefix: Optional[str] = None  # for "proxy" and "static" services
     upstreams: Optional[List[str]] = None
     directory: Optional[str] = None
     source: str = "file"
@@ -17,8 +17,7 @@ class Service:
     priority: bool = False
     transcoder: Optional[dict] = None
     sidecars: Optional[List[str]] = None  # list of sidecar ids
-    abilities: List[str] = None # for sidecars
-
+    abilities: List[str] = None  # for sidecars
 
     def from_dict(data: dict, source: str) -> "Service":
         return Service(
