@@ -29,3 +29,9 @@ nav:
   - Debugging:
     - Caddy: debugging-caddy.md
     - Envoy: debugging-envoy.md
+
+plugins:
+  - search
+  - mike:
+      alias_type: symlink
+      canonical_version: latest
