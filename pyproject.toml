@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "harbor-proxy"
-version = "0.14.0.dev0"
+version = "0.14.0"
 description = "Dynamic reverse proxy controller with TTL-based service registry"
 authors = ["Benoît Allard <benoit.allard@gmx.de>"]
 readme = "README.md"

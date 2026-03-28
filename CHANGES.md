@@ -2,7 +2,7 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [unreleased]
+## [0.14.0] - 2026-03-28
 
 ### Harbor
 - `kind=sidecar` — new service kind for infrastructure sidecars (authz, transcoder, ratelimit, etc.)
@@ -12,6 +12,7 @@ All notable changes to Harbor will be documented in this file.
 - `Dispatcher` — feature matching now driven by sidecar abilities rather than service fields
 - `_find_backends_for` and `_service_features` — unified feature matching logic
 - Sidecar dispatch — routes to any backend with matching features, including ingress
+- Added full documentation in `docs/` directory, managed by MkDocs and viewable on GitHub
 
 ## [0.13.0] - 2026-03-26
 
