@@ -1,44 +1,28 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional, List
 
 
 @dataclass
 class Service:
     id: str
     prefix: str
-    kind: str  # "proxy" or "static"
+    kind: str  # "proxy", "static", "sidecar"
     upstreams: Optional[List[str]] = None
     directory: Optional[str] = None
-    source: str = "file"  # "file" vs "dynamic"
-    public: bool = True  # included in /catalog
-    public_paths: Optional[List[str]] = None  # only these paths are proxied publicly
-    name: Optional[str] = None  # human-friendly name
-    icon: Optional[str] = None  # URL or path to an icon
-    priority: bool = (
-        False  # if true, this service is displayed with a special highlight
-    )
+    source: str = "file"
+    public: bool = True
+    public_paths: Optional[List[str]] = None
+    name: Optional[str] = None
+    icon: Optional[str] = None
+    priority: bool = False
     transcoder: Optional[dict] = None
-    bff: Optional[dict] = None
-
-    def from_dict(data: dict, source: str) -> "Service":
-        return Service(
-            id=data["id"],
-            prefix=data["prefix"],
-            kind=data["kind"],
-            upstreams=data.get("upstreams"),
-            directory=data.get("directory"),
-            source=source,
-            public=data.get("public", True),
-            public_paths=data.get("public_paths"),
-            name=data.get("name"),
-            icon=data.get("icon"),
-            priority=data.get("priority", False),
-        )
+    sidecars: Optional[List[str]] = None  # list of sidecar ids
+    abilities: List[str]
 
 
 @dataclass
 class Lease:
     service_id: str
     token: str
-    expires_at: float
     ttl: int
+    expires_at: float

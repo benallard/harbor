@@ -1,3 +1,6 @@
+from harbor.core.models import Service, Sidecar
+
+
 class ProxyBackend:
 
     def apply(self, services):
@@ -7,19 +10,26 @@ class ProxyBackend:
         """
         raise NotImplementedError
 
-    def register(self, service):
+    def register(self, service: Service):
         """
         Register a new service.
         Meant to be called when a service is added over the API.
         """
         raise NotImplementedError
 
-    def unregister(self, service):
+    def unregister(self, service: Service):
         """
         Unregister a service.
         Meant to be called when a service is removed over the API, or its lease expires.
         """
         raise NotImplementedError
+
+    def on_sidecar(self, sidecar: Sidecar):
+        """
+        Process a sidecar registration or update.
+        Backends that don't care about sidecars can ignore this.
+        """
+        pass
 
     @property
     def listener_url(self) -> str:

@@ -57,6 +57,9 @@ class EnvoyBackend(ProxyBackend):
             self.unregister(service)
 
     def _add(self, service: Service):
+        if service.kind == "sidecar":
+            self.clusters[service.id] = render_sidecar_cluster(service)
+            return
         self.clusters[service.id] = render_cluster(service)
         self.routes[service.id] = render_route(service)
 
@@ -120,7 +123,7 @@ class EnvoyBackend(ProxyBackend):
                 }
             )
 
-        if self._has_bff():
+        if self._has_authz():
             filters.append(
                 {
                     "name": "envoy.filters.http.ext_authz",
@@ -142,11 +145,11 @@ class EnvoyBackend(ProxyBackend):
 
         return filters
 
-    def _has_bff(self) -> bool:
+    def _has_authz(self) -> bool:
         return any(
-            s.get("bff", {}).get("enabled")
-            for s in self.routes.values()
-            if isinstance(s, dict)
+            "authz" in self.sidecars.get(sid, {}).get("abilities", [])
+            for route in self.routes.values()
+            for sid in (route.get("sidecars") or [])
         )
 
 
@@ -219,3 +222,38 @@ def render_route(service: Service) -> dict:
         }
 
     return route
+
+
+def render_sidecar_cluster(sidecar: Service) -> dict:
+    upstream = sidecar.upstreams[0]
+    host, port = upstream.rsplit(":", 1)
+    return {
+        "@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+        "name": sidecar.id,
+        "type": "STRICT_DNS",
+        "typed_extension_protocol_options": {
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
+                "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
+                "explicit_http_config": {"http2_protocol_options": {}},
+            }
+        },
+        "load_assignment": {
+            "cluster_name": sidecar.id,
+            "endpoints": [
+                {
+                    "lb_endpoints": [
+                        {
+                            "endpoint": {
+                                "address": {
+                                    "socket_address": {
+                                        "address": host,
+                                        "port_value": int(port),
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+        },
+    }

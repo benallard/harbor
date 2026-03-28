@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+
 from watchdog.events import (
     FileSystemEventHandler,
     FileCreatedEvent,
@@ -27,17 +28,17 @@ class RouteFileHandler(FileSystemEventHandler):
     def on_created(self, event: FileCreatedEvent):
         if not self._is_route_file(event.src_path):
             return
-        logger.info("Watcher: new route file %s", event.src_path)
         service = self._load(event.src_path)
         if service:
+            logger.info("Watcher: new %s %s", service.kind, service.id)
             self.registry.add_static(service)
 
     def on_modified(self, event: FileModifiedEvent):
         if not self._is_route_file(event.src_path):
             return
-        logger.info("Watcher: route file modified %s", event.src_path)
         service = self._load(event.src_path)
         if service:
+            logger.info("Watcher: %s modified %s", service.kind, service.id)
             self.registry.add_static(service)
 
     def on_deleted(self, event: FileDeletedEvent):

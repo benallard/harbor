@@ -6,11 +6,11 @@ from .models import Service, Lease
 
 
 class Registry:
-    def __init__(self, static_services: Dict[str, Service]) -> None:
+    def __init__(self, static_services, static_sidecars=None):
         self.static: Dict[str, Service] = static_services
         self.dynamic: Dict[str, Service] = {}
         self.leases: Dict[str, Lease] = {}
-        self._listeners: List[Callable[[str, Service], None]] = []
+        self._listeners = []
 
     def subscribe(self, listener: Callable[[str, Service], None]):
         self._listeners.append(listener)
@@ -71,4 +71,17 @@ class Registry:
         return True
 
     def all_services(self) -> List[Service]:
-        return list(self.static.values()) + list(self.dynamic.values())
+        return [
+            s
+            for s in list(self.static.values()) + list(self.dynamic.values())
+            if s.kind != "sidecar"
+        ]
+
+    @property
+    def sidecars(self) -> Dict[str, Service]:
+        return {k: v for k, v in self.static.items() if v.kind == "sidecar"}
+
+    def get_sidecars_for(self, service: Service) -> List[Service]:
+        if not service.sidecars:
+            return []
+        return [self.static[sid] for sid in service.sidecars if sid in self.static]
