@@ -1,4 +1,4 @@
-from harbor.core.models import Service, Sidecar
+from harbor.core.models import Service
 
 
 class ProxyBackend:
@@ -23,13 +23,6 @@ class ProxyBackend:
         Meant to be called when a service is removed over the API, or its lease expires.
         """
         raise NotImplementedError
-
-    def on_sidecar(self, sidecar: Sidecar):
-        """
-        Process a sidecar registration or update.
-        Backends that don't care about sidecars can ignore this.
-        """
-        pass
 
     @property
     def listener_url(self) -> str:

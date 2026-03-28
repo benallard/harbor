@@ -13,7 +13,7 @@ from .core.loader import load_services  # noqa: E402
 from .backend.factory import create_backend  # noqa: E402
 from .tasks.gc import create_gc  # noqa: E402
 from .tasks.watcher import create_watcher  # noqa: E402
-from .api import catalog  # noqa: E402
+from .api import catalog, services  # noqa: E402
 
 
 def create_app(config: HarborConfig = None):
@@ -21,8 +21,8 @@ def create_app(config: HarborConfig = None):
         config = load_config()
 
     app = Flask(__name__)
-    services = load_services(config.static_dir)
-    registry = Registry(services)
+    static = load_services(config.static_dir)
+    registry = Registry(static)
 
     backend_instances = {
         name: create_backend(app, name, backend_config)

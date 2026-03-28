@@ -4,10 +4,18 @@ All notable changes to Harbor will be documented in this file.
 
 ## [unreleased]
 
+### Harbor
+- `kind=sidecar` — new service kind for infrastructure sidecars (authz, transcoder, ratelimit, etc.)
+- `abilities` field on `Service` — declares what capabilities a sidecar provides
+- `sidecars` field on `Service` — references sidecar ids required by a service
+- `bff` field removed — replaced by `sidecars: [my-bff]` referencing a sidecar with `abilities: [authz]`
+- `Dispatcher` — feature matching now driven by sidecar abilities rather than service fields
+- `_find_backends_for` and `_service_features` — unified feature matching logic
+- Sidecar dispatch — routes to any backend with matching features, including ingress
 
 ## [0.13.0] - 2026-03-26
 
-## Harbor
+### Harbor
 - Feature-based delegation — services declare capabilities (`bff`, `transcoder`) via structured fields, backends declare what they provide via `features` list in config
 - `kind=grpc` removed — plain `kind=proxy` covers gRPC, `transcoder` field signals transcoding need
 - `delegate` map removed from `BackendConfig` — replaced by `features` list

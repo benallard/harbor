@@ -16,6 +16,15 @@ class Dispatcher:
         self.backends = backends
         self.registry = registry
 
+    def apply(self, services):
+        ingress = self.backends[self.config.ingress]
+        ingress.apply(services)
+
+        for service in services:
+            delegate_name = self._find_delegate(service)
+            if delegate_name:
+                self.backends[delegate_name].apply([service])
+
     def _find_backends_for(self, features: set) -> List[str]:
         return [
             name
@@ -52,7 +61,7 @@ class Dispatcher:
         delegate_name = self._find_delegate(service)
 
         if delegate_name:
-            transformed = self._transform(service, self.backends[delegate_name])
+            transformed = _transform(service, self.backends[delegate_name])
             ingress_backend.on_event(event, transformed)
             self.backends[delegate_name].on_event(event, service)
         else:

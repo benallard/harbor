@@ -30,25 +30,40 @@ def make_backends():
     return {"caddy": caddy, "envoy": envoy}
 
 
-def make_service(bff=None, transcoder=None):
+def make_service(kind="proxy", sidecars=None, abilities=None):
     return Service(
         id="svc1",
-        prefix="/svc1",
-        kind="proxy",
+        prefix="/svc1" if kind != "sidecar" else "",
+        kind=kind,
         upstreams=["127.0.0.1:9090"],
         source="dynamic",
-        bff=bff,
-        transcoder=transcoder,
+        sidecars=sidecars,
+        abilities=abilities,
     )
+
+
+def make_sidecar(abilities=None):
+    return Service(
+        id="my-bff",
+        kind="sidecar",
+        upstreams=["127.0.0.1:9091"],
+        abilities=abilities or ["authz"],
+        source="file",
+    )
+
+
+def make_dispatcher(config, backends, sidecars_for=None):
+    registry = MagicMock()
+    registry.get_sidecars_for = lambda s: sidecars_for or []
+    return Dispatcher(config, backends, registry)
 
 
 # --- apply ---
 
-
-def test_apply_no_features():
+def test_apply_no_sidecars():
     config = make_config()
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    dispatcher = make_dispatcher(config, backends)
 
     services = [make_service()]
     dispatcher.apply(services)
@@ -57,31 +72,26 @@ def test_apply_no_features():
     backends["envoy"].apply.assert_not_called()
 
 
-def test_apply_with_bff():
-    config = make_config(envoy_features=["bff"])
+def test_apply_with_authz_sidecar():
+    config = make_config(envoy_features=["authz"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    services = [make_service(bff={"enabled": True})]
+    services = [make_service(sidecars=["my-bff"])]
     dispatcher.apply(services)
 
     backends["caddy"].apply.assert_called_once()
     backends["envoy"].apply.assert_called_once_with(services)
 
 
-def test_apply_with_transcoder():
+def test_apply_with_transcoder_sidecar():
     config = make_config(envoy_features=["transcoder"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    services = [
-        make_service(
-            transcoder={
-                "proto_descriptor": "/etc/harbor/proto/svc.pb",
-                "services": ["svc.v1.Svc"],
-            }
-        )
-    ]
+    services = [make_service(sidecars=["my-bff"])]
     dispatcher.apply(services)
 
     backends["caddy"].apply.assert_called_once()
@@ -90,11 +100,10 @@ def test_apply_with_transcoder():
 
 # --- dispatch ---
 
-
-def test_dispatch_no_features():
+def test_dispatch_no_sidecars():
     config = make_config()
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    dispatcher = make_dispatcher(config, backends)
 
     service = make_service()
     dispatcher.dispatch("registered", service)
@@ -103,12 +112,13 @@ def test_dispatch_no_features():
     backends["envoy"].on_event.assert_not_called()
 
 
-def test_dispatch_with_bff():
-    config = make_config(envoy_features=["bff"])
+def test_dispatch_with_authz_sidecar():
+    config = make_config(envoy_features=["authz"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    service = make_service(bff={"enabled": True})
+    service = make_service(sidecars=["my-bff"])
     dispatcher.dispatch("registered", service)
 
     caddy_call = backends["caddy"].on_event.call_args
@@ -121,17 +131,13 @@ def test_dispatch_with_bff():
     backends["envoy"].on_event.assert_called_once_with("registered", service)
 
 
-def test_dispatch_with_transcoder():
+def test_dispatch_with_transcoder_sidecar():
     config = make_config(envoy_features=["transcoder"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    service = make_service(
-        transcoder={
-            "proto_descriptor": "/etc/harbor/proto/svc.pb",
-            "services": ["svc.v1.Svc"],
-        }
-    )
+    service = make_service(sidecars=["my-bff"])
     dispatcher.dispatch("registered", service)
 
     caddy_call = backends["caddy"].on_event.call_args
@@ -142,37 +148,65 @@ def test_dispatch_with_transcoder():
 
 
 def test_dispatch_transform_preserves_original():
-    config = make_config(envoy_features=["bff"])
+    config = make_config(envoy_features=["authz"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    service = make_service(bff={"enabled": True})
+    service = make_service(sidecars=["my-bff"])
     dispatcher.dispatch("registered", service)
 
     assert service.kind == "proxy"
     assert service.upstreams == ["127.0.0.1:9090"]
-    assert service.bff == {"enabled": True}
+    assert service.sidecars == ["my-bff"]
 
 
-def test_dispatch_unregister_with_bff():
-    config = make_config(envoy_features=["bff"])
+def test_dispatch_unregister_with_sidecar():
+    config = make_config(envoy_features=["authz"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
-    service = make_service(bff={"enabled": True})
+    service = make_service(sidecars=["my-bff"])
     dispatcher.dispatch("unregistered", service)
 
     backends["caddy"].on_event.assert_called_once()
     backends["envoy"].on_event.assert_called_once_with("unregistered", service)
 
 
-def test_dispatch_no_features_goes_to_ingress_only():
-    config = make_config(envoy_features=["bff", "transcoder"])
+def test_dispatch_no_sidecars_goes_to_ingress_only():
+    config = make_config(envoy_features=["authz", "transcoder"])
     backends = make_backends()
-    dispatcher = Dispatcher(config, backends)
+    dispatcher = make_dispatcher(config, backends)
 
     service = make_service()
     dispatcher.dispatch("registered", service)
 
     backends["caddy"].on_event.assert_called_once_with("registered", service)
+    backends["envoy"].on_event.assert_not_called()
+
+
+# --- sidecar dispatch ---
+
+def test_dispatch_sidecar_to_capable_backend():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    dispatcher = make_dispatcher(config, backends)
+
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher.dispatch("registered", sidecar)
+
+    backends["envoy"].on_event.assert_called_once_with("registered", sidecar)
+    backends["caddy"].on_event.assert_not_called()
+
+
+def test_dispatch_sidecar_no_capable_backend():
+    config = make_config(envoy_features=[])
+    backends = make_backends()
+    dispatcher = make_dispatcher(config, backends)
+
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher.dispatch("registered", sidecar)
+
+    backends["caddy"].on_event.assert_not_called()
     backends["envoy"].on_event.assert_not_called()
