@@ -67,6 +67,7 @@ class Dispatcher:
         else:
             ingress_backend.on_event(event, service)
 
+
 def _transform(service: Service, delegate_backend) -> Service:
     return replace(
         service,

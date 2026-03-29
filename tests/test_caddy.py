@@ -40,8 +40,6 @@ def test_register_new_proxy_service(backend, httpx_mock: HTTPXMock):
     assert requests[0].method == "GET"
     assert requests[1].method == "PUT"
 
-    import json
-
     body = json.loads(requests[1].content)
     assert body["@id"] == "ephemeral-svc1"
     assert body["match"][0]["path"] == ["/test*"]
@@ -164,3 +162,88 @@ def test_on_event_unknown(backend, httpx_mock: HTTPXMock):
     # should not raise, just log a warning
     backend.on_event("unknown", service)
     assert len(httpx_mock.get_requests()) == 0
+
+
+def test_register_proxy_service_no_strip_prefix(backend, httpx_mock: HTTPXMock):
+    service = make_service("svc1")
+    service = Service(
+        id="svc1",
+        prefix="/test",
+        kind="proxy",
+        upstreams=["127.0.0.1:5000"],
+        source="dynamic",
+        strip_prefix=False,
+    )
+
+    httpx_mock.add_response(
+        method="GET", url="http://localhost:2019/id/ephemeral-svc1", status_code=404
+    )
+    httpx_mock.add_response(
+        method="PUT",
+        url="http://localhost:2019/config/apps/http/servers/srv0/routes/0",
+        status_code=200,
+    )
+
+    backend.register(service)
+
+    body = json.loads(httpx_mock.get_requests()[1].content)
+    # no rewrite handler when strip_prefix=False
+    assert body["handle"][0]["handler"] == "reverse_proxy"
+
+
+def test_register_proxy_service_http2(backend, httpx_mock: HTTPXMock):
+    service = Service(
+        id="svc1",
+        prefix="/test",
+        kind="proxy",
+        upstreams=["127.0.0.1:5000"],
+        source="dynamic",
+        protocol="http2",
+    )
+
+    httpx_mock.add_response(
+        method="GET", url="http://localhost:2019/id/ephemeral-svc1", status_code=404
+    )
+    httpx_mock.add_response(
+        method="PUT",
+        url="http://localhost:2019/config/apps/http/servers/srv0/routes/0",
+        status_code=200,
+    )
+
+    backend.register(service)
+
+    body = json.loads(httpx_mock.get_requests()[1].content)
+    proxy = body["handle"][1]
+    assert proxy["handler"] == "reverse_proxy"
+    assert proxy["transport"]["versions"] == ["h2c"]
+
+
+def test_register_proxy_service_no_strip_prefix_no_rewrite(
+    backend, httpx_mock: HTTPXMock
+):
+    service = Service(
+        id="svc1",
+        prefix="/test",
+        kind="proxy",
+        upstreams=["127.0.0.1:5000"],
+        source="dynamic",
+        strip_prefix=False,
+        protocol="http2",
+    )
+
+    httpx_mock.add_response(
+        method="GET", url="http://localhost:2019/id/ephemeral-svc1", status_code=404
+    )
+    httpx_mock.add_response(
+        method="PUT",
+        url="http://localhost:2019/config/apps/http/servers/srv0/routes/0",
+        status_code=200,
+    )
+
+    backend.register(service)
+
+    body = json.loads(httpx_mock.get_requests()[1].content)
+    # only one handler — reverse_proxy, no rewrite
+    assert len(body["handle"]) == 1
+    assert body["handle"][0]["handler"] == "reverse_proxy"
+    assert body["handle"][0]["transport"]["versions"] == ["h2c"]

@@ -18,7 +18,9 @@ class Service:
     transcoder: Optional[dict] = None
     sidecars: Optional[List[str]] = None  # list of sidecar ids
     abilities: List[str] = None  # for sidecars
-    protocol: Optional[str] = None  # "http2" for gRPC upstreams, None defaults to http/1.1
+    protocol: Optional[str] = (
+        None  # "http2" for gRPC upstreams, None defaults to http/1.1
+    )
     strip_prefix: bool = True
 
     def from_dict(data: dict, source: str) -> "Service":

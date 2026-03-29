@@ -117,32 +117,38 @@ class EnvoyBackend(ProxyBackend):
         filters = []
 
         if any(s.get("typed_per_filter_config") for s in self.routes.values()):
-            filters.append({
-                "name": "envoy.filters.http.grpc_json_transcoder",
-                "typed_config": {
-                    "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
-                    "proto_descriptor": "",
-                    "services": [],
-                },
-            })
+            filters.append(
+                {
+                    "name": "envoy.filters.http.grpc_json_transcoder",
+                    "typed_config": {
+                        "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
+                        "proto_descriptor": "",
+                        "services": [],
+                    },
+                }
+            )
 
         if self._has_authz():
-            filters.append({
-                "name": "envoy.filters.http.ext_authz",
-                "typed_config": {
-                    "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
-                    "grpc_service": {
-                        "envoy_grpc": {"cluster_name": self.authz_cluster}
+            filters.append(
+                {
+                    "name": "envoy.filters.http.ext_authz",
+                    "typed_config": {
+                        "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                        "grpc_service": {
+                            "envoy_grpc": {"cluster_name": self.authz_cluster}
+                        },
                     },
-                },
-            })
+                }
+            )
 
-        filters.append({
-            "name": "envoy.filters.http.router",
-            "typed_config": {
-                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
-            },
-        })
+        filters.append(
+            {
+                "name": "envoy.filters.http.router",
+                "typed_config": {
+                    "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                },
+            }
+        )
 
         return filters
 
@@ -166,18 +172,22 @@ def render_cluster(service: Service) -> dict:
         "type": "STRICT_DNS",
         "load_assignment": {
             "cluster_name": service.id,
-            "endpoints": [{
-                "lb_endpoints": [{
-                    "endpoint": {
-                        "address": {
-                            "socket_address": {
-                                "address": host,
-                                "port_value": int(port),
+            "endpoints": [
+                {
+                    "lb_endpoints": [
+                        {
+                            "endpoint": {
+                                "address": {
+                                    "socket_address": {
+                                        "address": host,
+                                        "port_value": int(port),
+                                    }
+                                }
                             }
                         }
-                    }
-                }]
-            }],
+                    ]
+                }
+            ],
         },
     }
 

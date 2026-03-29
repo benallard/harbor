@@ -81,10 +81,11 @@ class CaddyBackend(ProxyBackend):
 
 def render_route(service: Service) -> dict:
     if service.kind == "proxy":
-       return _render_proxy_route(service)
+        return _render_proxy_route(service)
     elif service.kind == "static":
         return _render_static_route(service)
-    
+
+
 def _render_proxy_route(service: Service) -> dict:
     if service.public_paths:
         paths = [f"{service.prefix}{p}" for p in service.public_paths]
@@ -94,35 +95,29 @@ def _render_proxy_route(service: Service) -> dict:
     handlers = []
 
     if service.strip_prefix:
-        handlers.append({
-            "handler": "rewrite",
-            "strip_path_prefix": service.prefix
-        })
+        handlers.append({"handler": "rewrite", "strip_path_prefix": service.prefix})
 
     proxy = {
         "handler": "reverse_proxy",
-        "upstreams": [
-            {"dial": upstream} for upstream in (service.upstreams or [])
-        ],
+        "upstreams": [{"dial": upstream} for upstream in (service.upstreams or [])],
         "headers": {
             "request": {
                 "set": {
-                    "X-Forwarded-For":    ["{http.request.remote.host}"],
-                    "X-Forwarded-Proto":  ["{http.request.scheme}"],
+                    "X-Forwarded-For": ["{http.request.remote.host}"],
+                    "X-Forwarded-Proto": ["{http.request.scheme}"],
                     "X-Forwarded-Prefix": [service.prefix],
-                    "X-Real-IP":          ["{http.request.remote.host}"],
-                    "Host":               ["{http.request.host}"],
-                    "Forwarded":          ["for={http.request.remote.host};host={http.request.host};proto={http.request.scheme}"],
+                    "X-Real-IP": ["{http.request.remote.host}"],
+                    "Host": ["{http.request.host}"],
+                    "Forwarded": [
+                        "for={http.request.remote.host};host={http.request.host};proto={http.request.scheme}"
+                    ],
                 }
             }
         },
     }
 
     if service.protocol == "http2":
-        proxy["transport"] = {
-            "protocol": "http",
-            "versions": ["h2c"]
-        }
+        proxy["transport"] = {"protocol": "http", "versions": ["h2c"]}
 
     handlers.append(proxy)
 
@@ -130,6 +125,7 @@ def _render_proxy_route(service: Service) -> dict:
         "match": [{"path": paths}],
         "handle": handlers,
     }
+
 
 def _render_static_route(service: Service) -> dict:
     return {
