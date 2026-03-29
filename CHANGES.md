@@ -3,6 +3,14 @@
 All notable changes to Harbor will be documented in this file.
 
 ## [unreleased]
+- `protocol` field added to `Service` — explicit HTTP/2 signaling (`http2`) for gRPC upstreams, replaces implicit `kind=grpc` detection
+- `strip_prefix` field added to `Service` — controls whether Caddy strips the path prefix before forwarding (default: `true`, set to `false` when delegating to Envoy)
+- `Dispatcher._transform` sets `strip_prefix=False` on transformed services — Envoy always receives the full path
+- `CaddyBackend.render_route` respects `strip_prefix` and `protocol` fields
+- `EnvoyBackend.render_cluster` uses `protocol == "http2"` instead of `kind == "grpc"`
+- `EnvoyBackend.render_route` no longer rewrites prefix to `/` — Envoy matches on full path
+- `EnvoyBackend` tracks `authz_cluster` explicitly — `_has_authz` and `_build_http_filters` use it directly
+- `EnvoyBackend.unregister` clears `authz_cluster` when the authz sidecar is removed
 
 ## [0.14.0] - 2026-03-28
 

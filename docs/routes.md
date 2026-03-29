@@ -55,6 +55,8 @@ icon: /assets/grafana.png
 | `icon` | no | URL or path to a service icon |
 | `sidecars` | no | List of sidecar IDs required by this service |
 | `transcoder` | no | gRPC-JSON transcoding config (see below) |
+| `protocol` | no | Upstream protocol — `http2` for gRPC services (default: HTTP/1.1) |
+| `strip_prefix` | no | Whether to strip the path prefix before forwarding (default: `true`) |
 
 ### Restricting public paths
 
@@ -73,23 +75,30 @@ public_paths:
   - /catalog/*
 ```
 
-### gRPC transcoding
+### gRPC services
 
-Services that require gRPC-JSON transcoding declare a `transcoder` block.
-This requires an Envoy backend with the `transcoder` feature.
+Services that speak gRPC declare `protocol: http2` to tell the proxy to use HTTP/2 cleartext when connecting to the upstream.
+Services that also need JSON transcoding declare a `transcoder` block.
+Both require an Envoy backend with the matching features (`transcoder`, `authz`).
 
 ```yaml
 id: myservice
 name: My gRPC Service
 kind: proxy
 prefix: /api/myservice
+protocol: http2
 upstreams:
   - 127.0.0.1:9090
 transcoder:
   proto_descriptor: /etc/harbor/proto/myservice.pb
   services:
     - myservice.v1.MyService
+sidecars:
+  - my-bff
 ```
+
+Note that `strip_prefix` is managed automatically by Harbor when a service is delegated to a backend like Envoy — you do not need to set it manually in most cases.
+It is available as an explicit override for unusual setups.
 
 ---
 

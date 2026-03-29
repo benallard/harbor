@@ -78,7 +78,9 @@ sudo usermod -aG caddy <harbor-user>
 - Routes are inserted at position 0 in the Caddy routes array, before the catch-all
 - Each route is tagged with an `@id` for targeted updates and deletions
 - Static services use the prefix `static-<id>`, ephemeral services use `ephemeral-<id>`
-- Path prefix is stripped before forwarding
+- Path prefix is stripped before forwarding when `strip_prefix: true` (default)
+- When a service is delegated to another backend (e.g. Envoy), `strip_prefix` is automatically set to `false` — the delegate needs the full path
+- When `protocol: http2` is set, Caddy uses HTTP/2 cleartext (`h2c`) transport for the upstream connection
 - Standard forwarding headers are set: `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Prefix`, `X-Real-IP`, `Host`, `Forwarded`
 
 ---
@@ -117,9 +119,11 @@ See `contrib/envoy-bootstrap.yaml`.
 
 - Each service becomes a cluster in `cds.yaml`
 - Each service route is added to the listener's route config in `lds.yaml`
+- Services with `protocol: http2` get HTTP/2 cluster config (`http2_protocol_options`)
+- Services with `transcoder` get per-route `grpc_json_transcoder` filter config
 - Sidecars with `authz` ability become dedicated clusters wired to Envoy's `ext_authz` filter
-- Sidecars with `transcoder` ability trigger the `grpc_json_transcoder` filter per route
-- All writes are atomic (`rename` after write to a temp file)
+- Routes are matched on the full path including prefix — Caddy does not strip the prefix when delegating
+- All writes are atomic (`rename` after writing to a temp file)
 
 ---
 

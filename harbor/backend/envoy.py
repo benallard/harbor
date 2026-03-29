@@ -34,6 +34,7 @@ class EnvoyBackend(ProxyBackend):
         self.config = EnvoyConfig.from_backend_config(config)
         self.clusters = {}  # service_id → cluster config
         self.routes = {}  # service_id → route config
+        self.authz_cluster = None  # service_id of the cluster to use for authz
         ENVOY_RUN_DIR.mkdir(parents=True, exist_ok=True)
 
     def apply(self, services):
@@ -48,6 +49,8 @@ class EnvoyBackend(ProxyBackend):
     def unregister(self, service: Service):
         self.clusters.pop(service.id, None)
         self.routes.pop(service.id, None)
+        if self.authz_cluster == service.id:
+            self.authz_cluster = None
         self._write()
 
     def on_event(self, event: str, service: Service):
@@ -59,6 +62,8 @@ class EnvoyBackend(ProxyBackend):
     def _add(self, service: Service):
         if service.kind == "sidecar":
             self.clusters[service.id] = render_sidecar_cluster(service)
+            if "authz" in (service.abilities or []):
+                self.authz_cluster = service.id
             return
         self.clusters[service.id] = render_cluster(service)
         self.routes[service.id] = render_route(service)
@@ -112,45 +117,37 @@ class EnvoyBackend(ProxyBackend):
         filters = []
 
         if any(s.get("typed_per_filter_config") for s in self.routes.values()):
-            filters.append(
-                {
-                    "name": "envoy.filters.http.grpc_json_transcoder",
-                    "typed_config": {
-                        "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
-                        "proto_descriptor": "",
-                        "services": [],
-                    },
-                }
-            )
+            filters.append({
+                "name": "envoy.filters.http.grpc_json_transcoder",
+                "typed_config": {
+                    "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
+                    "proto_descriptor": "",
+                    "services": [],
+                },
+            })
 
         if self._has_authz():
-            filters.append(
-                {
-                    "name": "envoy.filters.http.ext_authz",
-                    "typed_config": {
-                        "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
-                        "grpc_service": {"envoy_grpc": {"cluster_name": "bff"}},
-                    },
-                }
-            )
-
-        filters.append(
-            {
-                "name": "envoy.filters.http.router",
+            filters.append({
+                "name": "envoy.filters.http.ext_authz",
                 "typed_config": {
-                    "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                    "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                    "grpc_service": {
+                        "envoy_grpc": {"cluster_name": self.authz_cluster}
+                    },
                 },
-            }
-        )
+            })
+
+        filters.append({
+            "name": "envoy.filters.http.router",
+            "typed_config": {
+                "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+            },
+        })
 
         return filters
 
     def _has_authz(self) -> bool:
-        return any(
-            "authz" in self.sidecars.get(sid, {}).get("abilities", [])
-            for route in self.routes.values()
-            for sid in (route.get("sidecars") or [])
-        )
+        return self.authz_cluster is not None
 
 
 def _atomic_write(path: Path, data: dict):
@@ -169,26 +166,22 @@ def render_cluster(service: Service) -> dict:
         "type": "STRICT_DNS",
         "load_assignment": {
             "cluster_name": service.id,
-            "endpoints": [
-                {
-                    "lb_endpoints": [
-                        {
-                            "endpoint": {
-                                "address": {
-                                    "socket_address": {
-                                        "address": host,
-                                        "port_value": int(port),
-                                    }
-                                }
+            "endpoints": [{
+                "lb_endpoints": [{
+                    "endpoint": {
+                        "address": {
+                            "socket_address": {
+                                "address": host,
+                                "port_value": int(port),
                             }
                         }
-                    ]
-                }
-            ],
+                    }
+                }]
+            }],
         },
     }
 
-    if service.kind == "grpc":
+    if service.protocol == "http2":
         cluster["typed_extension_protocol_options"] = {
             "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
                 "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
@@ -204,7 +197,6 @@ def render_route(service: Service) -> dict:
         "match": {"prefix": service.prefix},
         "route": {
             "cluster": service.id,
-            "prefix_rewrite": "/",
         },
     }
 
