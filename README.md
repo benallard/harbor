@@ -27,7 +27,18 @@ They need a clean URL but not a permanent route.
 With Harbor, they register themselves via API with a TTL lease, get a route, and disappear cleanly when done.
 No cleanup scripts, no stale config.
 
-### Multi-backend orchestration
+### Debian packaging
+
+When services are distributed as Debian packages, each package can ship its own `.route` file.
+The package declares how it wants to be exposed — prefix, upstreams, protocol — without knowing or caring which proxy is running on the target host.
+Harbor reads the file at startup (or picks it up live via the watcher) and configures the proxy accordingly.
+
+This means a package maintainer writes one `.route` file, and the service is correctly exposed to users and other services on any Harbor-managed host — whether the proxy is Caddy, Envoy, or something else.
+No post-install scripts that edit proxy config.
+No host-specific configuration in the package.
+No manual steps for the operator.
+
+
 
 A gRPC service exposed over HTTP/JSON needs Envoy for transcoding and authentication.
 But it also needs Caddy to route traffic to Envoy.
