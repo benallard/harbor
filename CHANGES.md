@@ -2,6 +2,8 @@
 
 All notable changes to Harbor will be documented in this file.
 
+## [unreleased]
+
 ## [0.15.0] - 2026-03-29
 - `protocol` field added to `Service` — explicit HTTP/2 signaling (`http2`) for gRPC upstreams, replaces implicit `kind=grpc` detection
 - `strip_prefix` field added to `Service` — controls whether Caddy strips the path prefix before forwarding (default: `true`, set to `false` when delegating to Envoy)
