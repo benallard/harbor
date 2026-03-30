@@ -18,11 +18,10 @@ class Dispatcher:
 
     def apply(self, services):
         for service in services:
-            self.dispatch('registered', service)
+            self.dispatch("registered", service)
 
     def _find_backends_for(self, features: set) -> List[str]:
-        """ Return list of backend names that support any of the given features.
-        """
+        """Return list of backend names that support any of the given features."""
         return [
             name
             for name, config in self.config.backends.items()
@@ -30,8 +29,7 @@ class Dispatcher:
         ]
 
     def _service_features(self, service: Service) -> set:
-        """ Return set of features required by the service, based on its sidecars.
-        """
+        """Return set of features required by the service, based on its sidecars."""
         sidecars = self.registry.get_sidecars_for(service)
         return {a for s in sidecars for a in (s.abilities or [])}
 

@@ -1,5 +1,3 @@
-import subprocess
-
 from ..core.config import HarborConfig
 from .base import ProxyBackend
 

@@ -1,4 +1,3 @@
-import yaml
 from pathlib import Path
 
 from ..core.config import HarborConfig
@@ -9,4 +8,3 @@ class TraefikBackend(ProxyBackend):
 
     def __init__(self, config: HarborConfig):
         self.config_file = Path(config.url)
-

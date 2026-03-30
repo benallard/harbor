@@ -17,7 +17,7 @@ BACKENDS = {
     "flask": FlaskProxyBackend,
     # Not implemented, just here for completeness
     "nginx": NginxBackend,
-    "traefik": TraefikBackend
+    "traefik": TraefikBackend,
 }
 
 

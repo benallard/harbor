@@ -7,8 +7,7 @@ from .models import Service, Lease
 
 class Registry:
     def __init__(self, static_services: Dict[str, Service]):
-        """ static services don't require TTLs, they are defined by config files.
-        """
+        """static services don't require TTLs, they are defined by config files."""
         self.static: Dict[str, Service] = static_services
         self.dynamic: Dict[str, Service] = {}
         self.leases: Dict[str, Lease] = {}
@@ -80,8 +79,7 @@ class Registry:
         ]
 
     def get_sidecars_for(self, service: Service) -> List[Service]:
-        """ Return list of sidecar services associated with the given service.
-        """
+        """Return list of sidecar services associated with the given service."""
         if not service.sidecars:
             return []
         return [self.static[sid] for sid in service.sidecars if sid in self.static]
