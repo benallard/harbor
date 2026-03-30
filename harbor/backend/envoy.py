@@ -76,7 +76,7 @@ class EnvoyBackend(ProxyBackend):
                         "address": {
                             "socket_address": {
                                 "address": "0.0.0.0",
-                                "port_value": int(self.config.listener_port),
+                                "port_value": self.config.listener_port,
                             }
                         },
                         "filter_chains": [
@@ -210,8 +210,8 @@ def render_route(service: Service) -> dict:
         route["typed_per_filter_config"] = {
             "envoy.filters.http.grpc_json_transcoder": {
                 "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder",
-                "proto_descriptor": service.transcoder["proto_descriptor"],
-                "services": service.transcoder["services"],
+                "proto_descriptor": service.transcoder.proto_descriptor,
+                "services": service.transcoder.services,
                 "print_options": {
                     "add_whitespace": True,
                     "always_print_primitive_fields": True,

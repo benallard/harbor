@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import httpx
 import logging
 
+from typing import Optional
+
 from ..core.config import BackendConfig
 from .base import ProxyBackend
 from ..core.models import Service
@@ -53,6 +55,9 @@ class CaddyBackend(ProxyBackend):
         logger.debug("Registering service %s with CaddyBackend", service.id)
         prefix = "static" if service.source == "file" else "ephemeral"
         route = render_route(service)
+        if not route:
+            logger.warning("No route rendered for service %s", service.id)
+            return
         self._upsert_route(f"{prefix}-{service.id}", route)
 
     def unregister(self, service: Service):
@@ -75,11 +80,12 @@ class CaddyBackend(ProxyBackend):
         return f"127.0.0.1:{self.config.listener_port}"
 
 
-def render_route(service: Service) -> dict:
+def render_route(service: Service) -> Optional[dict]:
     if service.kind == "proxy":
         return _render_proxy_route(service)
     elif service.kind == "static":
         return _render_static_route(service)
+    return None
 
 
 def _render_proxy_route(service: Service) -> dict:

@@ -3,6 +3,12 @@ from typing import Optional, List
 
 
 @dataclass
+class Transcoder:
+    proto_descriptor: str
+    services: List[str]
+
+
+@dataclass
 class Service:
     id: str
     kind: str  # "proxy", "static", "sidecar"
@@ -15,7 +21,7 @@ class Service:
     name: Optional[str] = None
     icon: Optional[str] = None
     priority: bool = False
-    transcoder: Optional[dict] = None
+    transcoder: Optional[Transcoder] = None
     sidecars: Optional[List[str]] = None  # list of sidecar ids
     abilities: List[str] = None  # for sidecars
     protocol: Optional[str] = (
@@ -36,7 +42,9 @@ class Service:
             name=data.get("name"),
             icon=data.get("icon"),
             priority=data.get("priority", False),
-            transcoder=data.get("transcoder"),
+            transcoder=(
+                Transcoder(**data.get("transcoder")) if data.get("transcoder") else None
+            ),
             sidecars=data.get("sidecars"),
             abilities=data.get("abilities"),
             protocol=data.get("protocol"),
