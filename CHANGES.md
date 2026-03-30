@@ -2,6 +2,8 @@
 
 All notable changes to Harbor will be documented in this file.
 
+## [unreleased]
+
 ## [0.15.1] - 2026-03-30
 
 - Fix issues spotted during deployment
