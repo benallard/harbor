@@ -36,11 +36,6 @@ class EnvoyBackend(ProxyBackend):
         self.cds_path = run_dir / "cds.yaml"
         self.lds_path = run_dir / "lds.yaml"
 
-    def apply(self, services):
-        for service in services:
-            self._add(service)
-        self._write()
-
     def register(self, service: Service):
         self._add(service)
         self._write()

@@ -34,7 +34,7 @@ class HarborConfig:
                 kind=cfg["kind"],
                 url=cfg["url"],
                 options=cfg.get("options", {}),
-                delegate=cfg.get("delegate", {}),
+                features=cfg.get("features", []),
             )
             for name, cfg in data.get("backends", {}).items()
         }

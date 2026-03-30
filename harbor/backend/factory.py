@@ -1,5 +1,8 @@
 import logging
 
+from .nginx import NginxBackend
+from .traefik import TraefikBackend
+
 from ..core.config import BackendConfig
 from .base import ProxyBackend
 from .caddy import CaddyBackend
@@ -12,6 +15,9 @@ BACKENDS = {
     "caddy": CaddyBackend,
     "envoy": EnvoyBackend,
     "flask": FlaskProxyBackend,
+    # Not implemented, just here for completeness
+    "nginx": NginxBackend,
+    "traefik": TraefikBackend
 }
 
 

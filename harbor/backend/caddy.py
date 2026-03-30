@@ -49,18 +49,14 @@ class CaddyBackend(ProxyBackend):
             logger.debug("Updating route %s for service %s", route_id, route)
             self.client.patch(f"/id/{route_id}", json=route)
 
-    def apply(self, services):
-        for service in services:
-            logger.info("Applying static service %s at %s", service.id, service.prefix)
-            route = render_route(service)
-            self._upsert_route(f"static-{service.id}", route)
-
     def register(self, service: Service):
+        logger.debug("Registering service %s with CaddyBackend", service.id)
         prefix = "static" if service.source == "file" else "ephemeral"
         route = render_route(service)
         self._upsert_route(f"{prefix}-{service.id}", route)
 
     def unregister(self, service: Service):
+        logger.debug("Unregistering service %s from CaddyBackend", service.id)
         prefix = "static" if service.source == "file" else "ephemeral"
         self.client.delete(f"/id/{prefix}-{service.id}")
 

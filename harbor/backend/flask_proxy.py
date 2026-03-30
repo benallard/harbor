@@ -27,9 +27,6 @@ class FlaskProxyBackend(ProxyBackend):
         self.client = httpx.Client()
         self._install_gateway()
 
-    def apply(self, services):
-        self.router.rebuild(services)
-
     def register(self, service):
         self.router.add(service)
 

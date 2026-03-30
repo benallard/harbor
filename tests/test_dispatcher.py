@@ -69,8 +69,8 @@ def test_apply_no_sidecars():
     services = [make_service()]
     dispatcher.apply(services)
 
-    backends["caddy"].apply.assert_called_once_with(services)
-    backends["envoy"].apply.assert_not_called()
+    backends["caddy"].on_event.assert_called_once_with('registered', services[0])
+    backends["envoy"].on_event.assert_not_called()
 
 
 def test_apply_with_authz_sidecar():
@@ -82,8 +82,8 @@ def test_apply_with_authz_sidecar():
     services = [make_service(sidecars=["my-bff"])]
     dispatcher.apply(services)
 
-    backends["caddy"].apply.assert_called_once()
-    backends["envoy"].apply.assert_called_once_with(services)
+    backends["caddy"].on_event.assert_called_once()
+    backends["envoy"].on_event.assert_called_once()
 
 
 def test_apply_with_transcoder_sidecar():
@@ -95,8 +95,8 @@ def test_apply_with_transcoder_sidecar():
     services = [make_service(sidecars=["my-bff"])]
     dispatcher.apply(services)
 
-    backends["caddy"].apply.assert_called_once()
-    backends["envoy"].apply.assert_called_once_with(services)
+    backends["caddy"].on_event.assert_called_once()
+    backends["envoy"].on_event.assert_called_once()
 
 
 # --- dispatch ---

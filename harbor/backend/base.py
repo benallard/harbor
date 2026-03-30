@@ -3,13 +3,6 @@ from harbor.core.models import Service
 
 class ProxyBackend:
 
-    def apply(self, services):
-        """
-        Apply the whole configuration.
-        Meant to be called at startup whenthe static configuration is loaded.
-        """
-        raise NotImplementedError
-
     def register(self, service: Service):
         """
         Register a new service.

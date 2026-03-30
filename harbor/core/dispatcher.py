@@ -17,13 +17,8 @@ class Dispatcher:
         self.registry = registry
 
     def apply(self, services):
-        ingress = self.backends[self.config.ingress]
-        ingress.apply(services)
-
         for service in services:
-            delegate_name = self._find_delegate(service)
-            if delegate_name:
-                self.backends[delegate_name].apply([service])
+            self.dispatch('registered', service)
 
     def _find_backends_for(self, features: set) -> List[str]:
         return [

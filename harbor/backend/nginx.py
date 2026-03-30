@@ -1,18 +1,13 @@
 import subprocess
+
+from ..core.config import HarborConfig
 from .base import ProxyBackend
 
 
 class NginxBackend(ProxyBackend):
 
-    def __init__(self, config_file):
-        self.config_file = config_file
-
-    def apply(self, services):
-
-        with open(self.config_file, "w") as f:
-            f.write(render_nginx(services))
-
-        subprocess.run(["nginx", "-s", "reload"])
+    def __init__(self, config: HarborConfig):
+        self.config_file = config.url
 
 
 def render_nginx(services):
