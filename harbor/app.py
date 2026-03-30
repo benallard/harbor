@@ -6,7 +6,7 @@ logging.basicConfig(
 )
 
 from flask import Flask  # noqa: E402
-from .core.config import HarborConfig, load_config  # noqa: E402
+from .core.config import HarborConfig, parse_args, load_config  # noqa: E402
 from .core.dispatcher import Dispatcher  # noqa: E402
 from .core.registry import Registry  # noqa: E402
 from .core.loader import load_services  # noqa: E402
@@ -16,9 +16,7 @@ from .tasks.watcher import create_watcher  # noqa: E402
 from .api import catalog, services  # noqa: E402
 
 
-def create_app(config: HarborConfig = None):
-    if config is None:
-        config = load_config()
+def create_app(config: HarborConfig) -> Flask:
 
     app = Flask(__name__)
     static = load_services(config.static_dir)
@@ -50,6 +48,10 @@ def create_app(config: HarborConfig = None):
 
 
 def main():
-    config = load_config()
+    # The ones from the command line.
+    args = parse_args()
+    # Work in the environment, and the files
+    config = load_config(args)
+    # Create the app and run it.
     app = create_app(config)
     app.run(host=config.host, port=config.port)

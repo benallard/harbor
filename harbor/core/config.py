@@ -88,13 +88,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_config() -> HarborConfig:
-    args = parse_args()
+def load_config(cmdline_args: argparse.Namespace = None) -> HarborConfig:
 
     # config file takes precedence over env
-    if args.config:
-        logger.info("Loading config from %s", args.config)
-        config = HarborConfig.from_file(args.config)
+    if cmdline_args and cmdline_args.config:
+        logger.info("Loading config from %s", cmdline_args.config)
+        config = HarborConfig.from_file(cmdline_args.config)
     elif "HARBOR_CONFIG" in os.environ:
         logger.info("Loading config from %s", os.environ["HARBOR_CONFIG"])
         config = HarborConfig.from_file(os.environ["HARBOR_CONFIG"])
@@ -102,16 +101,17 @@ def load_config() -> HarborConfig:
         logger.info("Loading config from environment")
         config = HarborConfig.from_env()
 
-    # CLI args override anything
-    if args.backend:
-        config.backends["default"].kind = args.backend
-    if args.backend_url:
-        config.backends["default"].url = args.backend_url
-    if args.static_dir:
-        config.static_dir = args.static_dir
-    if args.host:
-        config.host = args.host
-    if args.port:
-        config.port = args.port
+    if cmdline_args:
+        # CLI args override anything
+        if cmdline_args.backend:
+            config.backends["default"].kind = cmdline_args.backend
+        if cmdline_args.backend_url:
+            config.backends["default"].url = cmdline_args.backend_url
+        if cmdline_args.static_dir:
+            config.static_dir = cmdline_args.static_dir
+        if cmdline_args.host:
+            config.host = cmdline_args.host
+        if cmdline_args.port:
+            config.port = cmdline_args.port
 
     return config
