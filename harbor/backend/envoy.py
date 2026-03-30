@@ -10,10 +10,6 @@ from ..core.config import BackendConfig
 
 logger = logging.getLogger(__name__)
 
-ENVOY_RUN_DIR = Path("/run/envoy")
-CDS_PATH = ENVOY_RUN_DIR / "cds.yaml"
-LDS_PATH = ENVOY_RUN_DIR / "lds.yaml"
-
 
 @dataclass
 class EnvoyConfig:
@@ -35,7 +31,10 @@ class EnvoyBackend(ProxyBackend):
         self.clusters = {}  # service_id → cluster config
         self.routes = {}  # service_id → route config
         self.authz_cluster = None  # service_id of the cluster to use for authz
-        ENVOY_RUN_DIR.mkdir(parents=True, exist_ok=True)
+        run_dir = Path(config.url)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        self.cds_path = run_dir / "cds.yaml"
+        self.lds_path = run_dir / "lds.yaml"
 
     def apply(self, services):
         for service in services:
@@ -69,9 +68,9 @@ class EnvoyBackend(ProxyBackend):
         self.routes[service.id] = render_route(service)
 
     def _write(self):
-        _atomic_write(CDS_PATH, {"resources": list(self.clusters.values())})
+        _atomic_write(self.cds_path, {"resources": list(self.clusters.values())})
         _atomic_write(
-            LDS_PATH,
+            self.lds_path,
             {
                 "resources": [
                     {

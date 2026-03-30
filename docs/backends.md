@@ -96,6 +96,7 @@ Typically deployed behind Caddy, which acts as the ingress.
 backends:
   envoy:
     kind: envoy
+    url: /run/envoy
     options:
       listener-port: 10000   # port Envoy listens on (default: 10000)
       admin-port: 9901       # Envoy admin API port (default: 9901)
@@ -168,6 +169,7 @@ backends:
 
   envoy:
     kind: envoy
+    url: /run/envoy
     options:
       listener-port: 10000
     features:

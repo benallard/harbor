@@ -32,6 +32,7 @@ backends:
 
   envoy:
     kind: envoy
+    url: /run/envoy
     options:
       listener-port: 10000
       admin-port: 9901
