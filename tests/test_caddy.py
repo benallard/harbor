@@ -101,11 +101,10 @@ def test_unregister_service(backend, httpx_mock: HTTPXMock):
 def test_apply_static_services(backend, httpx_mock: HTTPXMock):
     services = [make_service("svc1"), make_service("svc2")]
 
-    for _ in services:
+    for service in services:
         httpx_mock.add_response(method="GET", status_code=404)
         httpx_mock.add_response(method="PUT", status_code=200)
-
-    backend.apply(services)
+        backend.register(service)
 
     requests = httpx_mock.get_requests()
     assert len(requests) == 4  # GET + PUT for each service

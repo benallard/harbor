@@ -76,6 +76,7 @@ def test_create_service_missing_fields(client):
 
 
 def test_create_service_triggers_backend(client, mock_backend):
+    mock_backend.reset_mock()
     client.post("/services", json=make_dynamic_service())
     mock_backend.on_event.assert_called_once()
     event, service = mock_backend.on_event.call_args[0]

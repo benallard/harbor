@@ -21,6 +21,8 @@ class Dispatcher:
             self.dispatch('registered', service)
 
     def _find_backends_for(self, features: set) -> List[str]:
+        """ Return list of backend names that support any of the given features.
+        """
         return [
             name
             for name, config in self.config.backends.items()
@@ -28,6 +30,8 @@ class Dispatcher:
         ]
 
     def _service_features(self, service: Service) -> set:
+        """ Return set of features required by the service, based on its sidecars.
+        """
         sidecars = self.registry.get_sidecars_for(service)
         return {a for s in sidecars for a in (s.abilities or [])}
 
@@ -36,8 +40,15 @@ class Dispatcher:
         if not features:
             return None
         backends = self._find_backends_for(features)
-        delegates = [b for b in backends if b != self.config.ingress]
-        return delegates[0] if delegates else None
+        if backends and len(backends) > 1:
+            logger.warning(
+                "Multiple backends %s support features %s required by service %s, using %s",
+                backends,
+                features,
+                service.id,
+                backends[0],
+            )
+        return backends[0] if backends else None
 
     def dispatch(self, event: str, service: Service):
         if service.kind == "sidecar":
@@ -56,8 +67,10 @@ class Dispatcher:
         delegate_name = self._find_delegate(service)
 
         if delegate_name:
+            # Tell the ingress how to reach the service
             transformed = _transform(service, self.backends[delegate_name])
             ingress_backend.on_event(event, transformed)
+            # And tell the proper backend to apply it.
             self.backends[delegate_name].on_event(event, service)
         else:
             ingress_backend.on_event(event, service)

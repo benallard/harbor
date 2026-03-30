@@ -79,6 +79,12 @@ def test_apply_with_authz_sidecar():
     sidecar = make_sidecar(abilities=["authz"])
     dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
 
+    dispatcher.apply([sidecar]) # sidecar itself should be registered with envoy
+    backends["envoy"].on_event.assert_called_once_with('registered', sidecar)
+    backends["caddy"].on_event.assert_not_called()
+
+    backends["envoy"].reset_mock()
+
     services = [make_service(sidecars=["my-bff"])]
     dispatcher.apply(services)
 

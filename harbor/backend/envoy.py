@@ -37,10 +37,12 @@ class EnvoyBackend(ProxyBackend):
         self.lds_path = run_dir / "lds.yaml"
 
     def register(self, service: Service):
+        logger.debug("Registering service %s with EnvoyBackend", service.id)
         self._add(service)
         self._write()
 
     def unregister(self, service: Service):
+        logger.debug("Unregistering service %s from EnvoyBackend", service.id)
         self.clusters.pop(service.id, None)
         self.routes.pop(service.id, None)
         if self.authz_cluster == service.id:
