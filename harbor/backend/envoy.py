@@ -55,6 +55,11 @@ class EnvoyBackend(ProxyBackend):
         elif event in ("unregistered", "expired"):
             self.unregister(service)
 
+    @property
+    def listener_url(self):
+        # Returns the URL where Envoy listens for delegated traffic
+        return f"localhost:{self.config.listener_port}"
+
     def _add(self, service: Service):
         if service.kind == "sidecar":
             self.clusters[service.id] = render_sidecar_cluster(service)
