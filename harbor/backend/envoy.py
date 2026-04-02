@@ -210,7 +210,7 @@ def render_route(service: Service) -> dict:
             "cluster": service.id,
         },
     }
-    
+
     if service.strip_prefix:
         route["route"]["prefix_rewrite"] = "/"
 
