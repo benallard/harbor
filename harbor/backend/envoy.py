@@ -205,6 +205,9 @@ def render_route(service: Service) -> dict:
             "cluster": service.id,
         },
     }
+    
+    if service.strip_prefix:
+        route["route"]["prefix_rewrite"] = "/"
 
     if service.transcoder:
         route["typed_per_filter_config"] = {
