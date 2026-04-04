@@ -2,7 +2,12 @@
 
 All notable changes to Harbor will be documented in this file.
 
-## [unreleased]
+## [0.16.0] - 2026-04-04
+- `Dispatcher._transform` returns multiple ingress routes when `transcoder` is present:
+  - REST route — strips prefix, forwards to Envoy's listener
+  - gRPC passthrough route — no strip, forwards to Envoy's listener with `protocol: http2`
+- `apply` method removed from backends — startup registration now loops over `register` directly
+- `test_envoy.py` added — covers cluster, route, sidecar rendering and backend lifecycle
 
 ## [0.15.2] - 2026-04-03
 

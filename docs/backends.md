@@ -106,7 +106,7 @@ backends:
 ### Configuration model
 
 Envoy is configured via file-based xDS.
-Harbor writes `/run/envoy/cds.yaml` (clusters) and `/run/envoy/lds.yaml` (listeners and routes) atomically.
+Harbor writes `{url}/cds.yaml` (clusters) and `{url}/lds.yaml` (listeners and routes) atomically.
 Envoy picks up changes via inotify without restarting.
 
 ### Bootstrap

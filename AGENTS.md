@@ -130,7 +130,7 @@ Env vars (`HARBOR_BACKEND`, `HARBOR_BACKEND_URL`, etc.) cover simple single-back
 ## Adding a new backend
 
 1. Create `harbor/backend/<name>.py` with a class extending `ProxyBackend`
-2. Implement `apply`, `register`, `unregister`, `on_event`, `listener_url`
+2. Implement `register`, `unregister`, `on_event`, `listener_url`
 3. Add a config dataclass `<Name>Config` with `from_backend_config` factory
 4. Register the class in `harbor/backend/factory.py` BACKENDS dict
 5. Declare supported `features` in `harbor.yaml` under the backend entry
