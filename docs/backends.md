@@ -87,8 +87,6 @@ sudo usermod -aG caddy <harbor-user>
 
 ## Envoy
 
-> The Envoy backend is experimental and has not been tested against a real Envoy instance.
-
 Used for services requiring gRPC-JSON transcoding or external authorization.
 Typically deployed behind Caddy, which acts as the ingress.
 

@@ -27,9 +27,9 @@ They need a clean URL but not a permanent route.
 With Harbor, they register themselves via API with a TTL lease, get a route, and disappear cleanly when done.
 No cleanup scripts, no stale config.
 
-### Debian packaging
+### Package distribution
 
-When services are distributed as Debian packages, each package can ship its own `.route` file.
+When services are distributed as packages, each package can ship its own `.route` file.
 The package declares how it wants to be exposed — prefix, upstreams, protocol — without knowing or caring which proxy is running on the target host.
 Harbor reads the file at startup (or picks it up live via the watcher) and configures the proxy accordingly.
 
