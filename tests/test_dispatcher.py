@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 from harbor.core.dispatcher import Dispatcher
 from harbor.core.config import HarborConfig, BackendConfig
-from harbor.core.models import Service
+from harbor.core.models import Service, Transcoder
 
 
 def make_config(envoy_features=None):
@@ -219,3 +219,171 @@ def test_dispatch_sidecar_no_capable_backend():
 
     backends["caddy"].on_event.assert_not_called()
     backends["envoy"].on_event.assert_not_called()
+
+
+# --- transform and multi-route dispatch ---
+
+
+def test_dispatch_transcoder_generates_rest_route(httpx_mock):
+    config = make_config(envoy_features=["transcoder"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = Service(
+        id="svc1",
+        prefix="/api/myservice",
+        kind="proxy",
+        upstreams=["127.0.0.1:9090"],
+        source="dynamic",
+        sidecars=["my-transcoder"],
+        transcoder=Transcoder(
+            proto_descriptor="/etc/harbor/proto/svc.pb",
+            services=["myservice.v1.MyService"],
+        ),
+        protocol="http2",
+    )
+
+    dispatcher.dispatch("registered", service)
+
+    # caddy should receive at least the REST route
+    caddy_calls = backends["caddy"].on_event.call_args_list
+    rest_call = next(
+        (c for c in caddy_calls if c[0][1].prefix == "/api/myservice"), None
+    )
+    assert rest_call is not None
+    transformed = rest_call[0][1]
+    assert transformed.strip_prefix is True
+    assert transformed.upstreams == ["127.0.0.1:10000"]
+    assert transformed.protocol == "http2"
+
+
+def test_dispatch_transcoder_generates_grpc_passthrough_route():
+    config = make_config(envoy_features=["transcoder"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = Service(
+        id="svc1",
+        prefix="/api/myservice",
+        kind="proxy",
+        upstreams=["127.0.0.1:9090"],
+        source="dynamic",
+        sidecars=["my-transcoder"],
+        transcoder=Transcoder(
+            proto_descriptor="/etc/harbor/proto/svc.pb",
+            services=["myservice.v1.MyService"],
+        ),
+        protocol="http2",
+    )
+
+    dispatcher.dispatch("registered", service)
+
+    caddy_calls = backends["caddy"].on_event.call_args_list
+    grpc_call = next(
+        (c for c in caddy_calls if c[0][1].prefix == "/myservice.v1.MyService"), None
+    )
+    assert grpc_call is not None
+    transformed = grpc_call[0][1]
+    assert transformed.strip_prefix is False
+    assert transformed.upstreams == ["127.0.0.1:10000"]
+    assert transformed.protocol == "http2"
+    # Transcoder left unchanged, ingress should not care
+    assert transformed.transcoder.services[0] == "myservice.v1.MyService"
+
+
+def test_dispatch_transcoder_envoy_receives_original():
+    config = make_config(envoy_features=["transcoder"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = Service(
+        id="svc1",
+        prefix="/api/myservice",
+        kind="proxy",
+        upstreams=["127.0.0.1:9090"],
+        source="dynamic",
+        sidecars=["my-transcoder"],
+        transcoder=Transcoder(
+            proto_descriptor="/etc/harbor/proto/svc.pb",
+            services=["myservice.v1.MyService"],
+        ),
+        protocol="http2",
+    )
+
+    dispatcher.dispatch("registered", service)
+
+    envoy_call = backends["envoy"].on_event.call_args
+    assert envoy_call[0][0] == "registered"
+    assert envoy_call[0][1] is service  # original, untouched
+
+
+def test_dispatch_unregister_removes_all_ingress_routes():
+    config = make_config(envoy_features=["transcoder"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = Service(
+        id="svc1",
+        prefix="/api/myservice",
+        kind="proxy",
+        upstreams=["127.0.0.1:9090"],
+        source="dynamic",
+        sidecars=["my-transcoder"],
+        transcoder=Transcoder(
+            proto_descriptor="/etc/harbor/proto/svc.pb",
+            services=["myservice.v1.MyService", "myservice.v1.AnotherService"],
+        ),
+        protocol="http2",
+    )
+
+    # register first to populate _ingress_ids
+    dispatcher.dispatch("registered", service)
+    backends["caddy"].on_event.reset_mock()
+    backends["envoy"].on_event.reset_mock()
+
+    # now unregister
+    dispatcher.dispatch("unregistered", service)
+
+    caddy_calls = backends["caddy"].on_event.call_args_list
+    removed_ids = [c[0][1].id for c in caddy_calls]
+
+    # both the REST and gRPC routes should be removed
+    assert "svc1" in removed_ids
+    assert any("grpc" in id for id in removed_ids)
+
+    # envoy also notified
+    backends["envoy"].on_event.assert_called_once_with("unregistered", service)
+
+
+def test_dispatch_no_transcoder_single_ingress_route():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = make_service(sidecars=["my-bff"])
+    dispatcher.dispatch("registered", service)
+
+    # only one caddy call — no gRPC passthrough when no transcoder
+    assert backends["caddy"].on_event.call_count == 1
+
+
+def test_dispatch_unregister_no_transcoder_removes_single_route():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = make_service(sidecars=["my-bff"])
+    dispatcher.dispatch("registered", service)
+    backends["caddy"].on_event.reset_mock()
+
+    dispatcher.dispatch("unregistered", service)
+
+    assert backends["caddy"].on_event.call_count == 1
+    removed = backends["caddy"].on_event.call_args[0][1]
+    assert removed.id == service.id

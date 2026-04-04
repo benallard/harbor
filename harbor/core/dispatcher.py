@@ -66,18 +66,42 @@ class Dispatcher:
 
         if delegate_name:
             # Tell the ingress how to reach the service
-            transformed = _transform(service, self.backends[delegate_name])
-            ingress_backend.on_event(event, transformed)
+            for transformed in _transform(service, self.backends[delegate_name]):
+                ingress_backend.on_event(event, transformed)
             # And tell the proper backend to apply it.
             self.backends[delegate_name].on_event(event, service)
         else:
             ingress_backend.on_event(event, service)
 
 
-def _transform(service: Service, delegate_backend) -> Service:
-    return replace(
-        service,
-        kind="proxy",
-        upstreams=[delegate_backend.listener_url],
-        strip_prefix=False,
-    )
+def _transform(service: Service, delegate_backend) -> List[Service]:
+    """
+    Transform the service into a (set of) proxy that the ingress can route to the delegate backend.
+    """
+    routes = [
+        replace(
+            service,
+            kind="proxy",
+            upstreams=[delegate_backend.listener_url],
+            strip_prefix=service.transcoder
+            is not None,  # When we have a transcoder, we should strip the prefix for the REST part
+        )
+    ]
+
+    if service.transcoder:
+        # Ironically, this is triggered by the transcoder, but is not the transcoded part itself.
+        for grpc_service in service.transcoder.services:
+            # Tell the ingress to let pass requests to the gRPC service,
+            # without stripping the prefix (as gRPC services are identified by it)
+            routes.append(
+                replace(
+                    service,
+                    id=f"{service.id}-grpc-{grpc_service.replace('.', '-')}",
+                    kind="proxy",
+                    prefix=f"/{grpc_service}",
+                    upstreams=[delegate_backend.listener_url],
+                    strip_prefix=False,
+                    protocol="http2",  # Those must be grpc
+                )
+            )
+    return routes
