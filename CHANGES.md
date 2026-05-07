@@ -2,6 +2,13 @@
 
 All notable changes to Harbor will be documented in this file.
 
+## [Unreleased]
+
+### Harbor
+- Fixed `.route` watcher handling for atomic package-manager installs and renames, so files moved into place such as `*.route.dpkg-new` are loaded immediately without restarting Harbor.
+- Fixed watcher unregister behavior to remove static services by the service `id` loaded from file contents rather than by filename stem.
+- Added watcher regression tests covering create, delete, and move events including APT-style rename flows.
+
 ## [0.16.0] - 2026-04-04
 - `Dispatcher._transform` returns multiple ingress routes when `transcoder` is present:
   - REST route — strips prefix, forwards to Envoy's listener
