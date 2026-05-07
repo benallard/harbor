@@ -4,6 +4,8 @@ All notable changes to Harbor will be documented in this file.
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-05-07
+
 ### Harbor
 - Fixed `.route` watcher handling for atomic package-manager installs and renames, so files moved into place such as `*.route.dpkg-new` are loaded immediately without restarting Harbor.
 - Fixed watcher unregister behavior to remove static services by the service `id` loaded from file contents rather than by filename stem.
