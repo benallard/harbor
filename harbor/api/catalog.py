@@ -38,6 +38,9 @@ def notify_subscribers(event: str, service: Service):
 
 @bp.get("/catalog")
 def catalog():
+    """
+    Public SPA endpoint exposing Harbor's catalog of services.
+    """
     services = _registry.all_services()
     return jsonify([_serialize(s) for s in services if s.public])
 
