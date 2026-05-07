@@ -1,6 +1,5 @@
 import json
 import pytest
-from unittest.mock import patch
 from harbor.backend.envoy import (
     EnvoyBackend,
     render_cluster,
