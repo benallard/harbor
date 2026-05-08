@@ -47,7 +47,7 @@ def backend(tmp_path):
     config = BackendConfig(
         kind="envoy",
         url=str(tmp_path),  # run directory, not an HTTP URL
-        options={"listener-port": "10000"},
+        options={"listener-port": "10000", "lds-reconcile-delay-ms": "0"},
     )
     return EnvoyBackend(config)
 
@@ -228,6 +228,30 @@ def test_backend_unregister_authz_sidecar_removes_filter(backend, tmp_path):
 
 def test_backend_listener_url(backend):
     assert backend.listener_url == "localhost:10000"
+
+
+def test_backend_reconciles_lds_after_cluster_change(monkeypatch, tmp_path):
+    config = BackendConfig(
+        kind="envoy",
+        url=str(tmp_path),
+        options={"listener-port": "10000", "lds-reconcile-delay-ms": "10"},
+    )
+    backend = EnvoyBackend(config)
+    service = make_service()
+
+    writes = []
+    sleeps = []
+
+    def fake_atomic_write(path, data):
+        writes.append(path.name)
+
+    monkeypatch.setattr("harbor.backend.envoy._atomic_write", fake_atomic_write)
+    monkeypatch.setattr("harbor.backend.envoy.time.sleep", lambda s: sleeps.append(s))
+
+    backend.register(service)
+
+    assert writes == ["cds.yaml", "lds.yaml", "lds.yaml"]
+    assert sleeps == [0.01]
 
 
 def test_backend_apply(backend, tmp_path):

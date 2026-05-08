@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+import time
 from pathlib import Path
 
 from dataclasses import dataclass
@@ -15,12 +16,16 @@ logger = logging.getLogger(__name__)
 class EnvoyConfig:
     listener_port: int = 10000
     admin_port: int = 9901
+    lds_reconcile_delay_ms: int = 50
 
     @staticmethod
     def from_backend_config(config: BackendConfig) -> "EnvoyConfig":
         return EnvoyConfig(
             listener_port=int(config.options.get("listener-port", 10000)),
             admin_port=int(config.options.get("admin-port", 9901)),
+            lds_reconcile_delay_ms=int(
+                config.options.get("lds-reconcile-delay-ms", 50)
+            ),
         )
 
 
@@ -31,6 +36,7 @@ class EnvoyBackend(ProxyBackend):
         self.clusters = {}  # service_id → cluster config
         self.routes = {}  # service_id → route config
         self.authz_cluster = None  # service_id of the cluster to use for authz
+        self._last_cluster_ids = set()
         run_dir = Path(config.url)
         run_dir.mkdir(parents=True, exist_ok=True)
         self.cds_path = run_dir / "cds.yaml"
@@ -70,49 +76,60 @@ class EnvoyBackend(ProxyBackend):
         self.routes[service.id] = render_route(service)
 
     def _write(self):
-        _atomic_write(self.cds_path, {"resources": list(self.clusters.values())})
-        _atomic_write(
-            self.lds_path,
-            {
-                "resources": [
-                    {
-                        "@type": "type.googleapis.com/envoy.config.listener.v3.Listener",
-                        "name": "harbor",
-                        "address": {
-                            "socket_address": {
-                                "address": "0.0.0.0",
-                                "port_value": self.config.listener_port,
-                            }
-                        },
-                        "filter_chains": [
-                            {
-                                "filters": [
-                                    {
-                                        "name": "envoy.filters.network.http_connection_manager",
-                                        "typed_config": {
-                                            "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
-                                            "stat_prefix": "harbor",
-                                            "http_filters": self._build_http_filters(),
-                                            "route_config": {
-                                                "virtual_hosts": [
-                                                    {
-                                                        "name": "local",
-                                                        "domains": ["*"],
-                                                        "routes": list(
-                                                            self.routes.values()
-                                                        ),
-                                                    }
-                                                ]
-                                            },
+        current_cluster_ids = set(self.clusters.keys())
+        clusters_changed = current_cluster_ids != self._last_cluster_ids
+        self._last_cluster_ids = current_cluster_ids
+
+        lds_payload = {
+            "resources": [
+                {
+                    "@type": "type.googleapis.com/envoy.config.listener.v3.Listener",
+                    "name": "harbor",
+                    "address": {
+                        "socket_address": {
+                            "address": "0.0.0.0",
+                            "port_value": self.config.listener_port,
+                        }
+                    },
+                    "filter_chains": [
+                        {
+                            "filters": [
+                                {
+                                    "name": "envoy.filters.network.http_connection_manager",
+                                    "typed_config": {
+                                        "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                                        "stat_prefix": "harbor",
+                                        "http_filters": self._build_http_filters(),
+                                        "route_config": {
+                                            "virtual_hosts": [
+                                                {
+                                                    "name": "local",
+                                                    "domains": ["*"],
+                                                    "routes": list(
+                                                        self.routes.values()
+                                                    ),
+                                                }
+                                            ]
                                         },
-                                    }
-                                ]
-                            }
-                        ],
-                    }
-                ]
-            },
-        )
+                                    },
+                                }
+                            ]
+                        }
+                    ],
+                }
+            ]
+        }
+
+        _atomic_write(self.cds_path, {"resources": list(self.clusters.values())})
+        _atomic_write(self.lds_path, lds_payload)
+
+        # Envoy may process LDS before CDS when both files change close together.
+        # Re-emitting LDS after a short delay helps ensure routes are accepted.
+        if clusters_changed and self.routes:
+            delay_s = self.config.lds_reconcile_delay_ms / 1000
+            if delay_s > 0:
+                time.sleep(delay_s)
+            _atomic_write(self.lds_path, lds_payload)
 
     def _build_http_filters(self) -> list:
         filters = []
