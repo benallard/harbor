@@ -36,6 +36,7 @@ backends:
     options:
       listener-port: 10000
       admin-port: 9901
+      lds-reconcile-delay-ms: 50
     features:
       - authz
       - transcoder

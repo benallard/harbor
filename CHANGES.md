@@ -4,6 +4,10 @@ All notable changes to Harbor will be documented in this file.
 
 ## [Unreleased]
 
+- fixed `cds` and `lds` race condition by introducting a delayed rewrite
+- added `lds-reconcile-delay-ms` config key to controll the delay of the rewrite
+
+
 ## [0.16.1] - 2026-05-07
 
 ### Harbor
