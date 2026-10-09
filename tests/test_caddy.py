@@ -1,4 +1,5 @@
 import pytest
+import httpx
 import json
 import re
 from pytest_httpx import HTTPXMock
@@ -426,3 +427,116 @@ def test_register_creates_routes_list_when_server_has_none(
 
     body = json.loads(httpx_mock.get_requests()[-1].content)
     assert [route["@id"] for route in body] == ["ephemeral-svc1"]
+
+
+def _registered(backend, httpx_mock, service):
+    """Register a service into an empty Caddy and forget the requests."""
+    _register_into(backend, httpx_mock, service, [CATCH_ALL])
+    httpx_mock.reset()
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_resync_pushes_routes_lost_by_caddy_reload(backend, httpx_mock: HTTPXMock):
+    _registered(backend, httpx_mock, make_service("api", prefix="/app/api"))
+    _registered(
+        backend, httpx_mock, make_service("front", kind="static", prefix="/app")
+    )
+
+    # A reload replaced the config with the Caddyfile's: only the catch-all is left.
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, json=[CATCH_ALL])
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, json=[CATCH_ALL])
+    httpx_mock.add_response(
+        method="GET",
+        url=ROUTES_URL,
+        json=[_harbor_route("ephemeral-api", "/app/api"), CATCH_ALL],
+    )
+    httpx_mock.add_response(
+        method="PUT", url=re.compile(rf"{ROUTES_URL}/\d+"), is_reusable=True
+    )
+
+    backend.resync()
+
+    puts = [r for r in httpx_mock.get_requests() if r.method == "PUT"]
+    assert [(str(r.url), json.loads(r.content)["@id"]) for r in puts] == [
+        (f"{ROUTES_URL}/0", "ephemeral-api"),
+        (f"{ROUTES_URL}/1", "ephemeral-front"),
+    ]
+
+
+def test_resync_does_nothing_when_routes_are_present(backend, httpx_mock: HTTPXMock):
+    _registered(backend, httpx_mock, make_service("svc1"))
+    httpx_mock.add_response(
+        method="GET",
+        url=ROUTES_URL,
+        json=[_harbor_route("ephemeral-svc1", "/test"), CATCH_ALL],
+    )
+
+    backend.resync()
+
+    assert [r.method for r in httpx_mock.get_requests()] == ["GET"]
+
+
+def test_resync_removes_routes_harbor_no_longer_has(backend, httpx_mock: HTTPXMock):
+    httpx_mock.add_response(
+        method="GET",
+        url=ROUTES_URL,
+        json=[_harbor_route("ephemeral-gone", "/gone"), CATCH_ALL],
+    )
+    httpx_mock.add_response(
+        method="DELETE", url="http://localhost:2019/id/ephemeral-gone"
+    )
+
+    backend.resync()
+
+    assert [r.method for r in httpx_mock.get_requests()] == ["GET", "DELETE"]
+
+
+def test_resync_does_not_push_unregistered_routes(backend, httpx_mock: HTTPXMock):
+    service = make_service("svc1")
+    _registered(backend, httpx_mock, service)
+    httpx_mock.add_response(
+        method="DELETE", url="http://localhost:2019/id/ephemeral-svc1"
+    )
+    backend.unregister(service)
+    httpx_mock.reset()
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, json=[CATCH_ALL])
+
+    backend.resync()
+
+    assert [r.method for r in httpx_mock.get_requests()] == ["GET"]
+
+
+def test_resync_tolerates_caddy_being_down(backend, httpx_mock: HTTPXMock):
+    _registered(backend, httpx_mock, make_service("svc1"))
+    httpx_mock.add_exception(httpx.ConnectError("Connection refused"))
+
+    backend.resync()
+
+
+def test_resync_leaves_routes_alone_when_they_cannot_be_read(
+    backend, httpx_mock: HTTPXMock
+):
+    _registered(backend, httpx_mock, make_service("svc1"))
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, status_code=500)
+
+    backend.resync()
+
+    assert [r.method for r in httpx_mock.get_requests()] == ["GET"]
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_register_while_caddy_is_down_is_pushed_on_resync(
+    backend, httpx_mock: HTTPXMock
+):
+    httpx_mock.add_exception(httpx.ConnectError("Connection refused"))
+    backend.register(make_service("svc1"))
+    httpx_mock.reset()
+
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, json=[CATCH_ALL])
+    httpx_mock.add_response(method="GET", url=ROUTES_URL, json=[CATCH_ALL])
+    httpx_mock.add_response(method="PUT", url=f"{ROUTES_URL}/0")
+
+    backend.resync()
+
+    body = json.loads(httpx_mock.get_requests()[-1].content)
+    assert body["@id"] == "ephemeral-svc1"

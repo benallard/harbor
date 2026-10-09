@@ -78,6 +78,8 @@ sudo usermod -aG caddy <harbor-user>
 - Harbor routes are kept before the catch-all, ordered by prefix length, longest first, so `/app/api` wins over `/app` regardless of registration order
 - Each route is tagged with an `@id` for targeted updates and deletions
 - Static services use the prefix `static-<id>`, ephemeral services use `ephemeral-<id>`
+- `caddy reload` and a Caddy restart load the Caddyfile and drop every route Harbor pushed; Harbor checks every 10 seconds and pushes the missing routes again, so no Harbor restart is needed and ephemeral leases are kept
+- Harbor routes in Caddy that Harbor no longer knows (e.g. left over from a previous Harbor process) are removed by the same check
 - Path prefix is stripped before forwarding when `strip_prefix: true` (default)
 - When a service is delegated to another backend (e.g. Envoy), `strip_prefix` is automatically set to `false` — the delegate needs the full path
 - When `protocol: http2` is set, Caddy uses HTTP/2 cleartext (`h2c`) transport for the upstream connection

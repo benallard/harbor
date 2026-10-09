@@ -39,7 +39,9 @@ class CaddyBackend(ProxyBackend):
         else:
             self.client = httpx.Client(base_url=admin_url)
         self.routes_path = f"/config/apps/http/servers/{self.config.server_name}/routes"
-        self._lock = threading.Lock()
+        # Routes Harbor wants in Caddy, by @id, so they can be pushed again when Caddy loses them.
+        self._routes = {}
+        self._lock = threading.RLock()
 
     def _upsert_route(self, route_id: str, route: dict):
         route["@id"] = route_id
@@ -85,12 +87,64 @@ class CaddyBackend(ProxyBackend):
         if not route:
             logger.warning("No route rendered for service %s", service.id)
             return
-        self._upsert_route(f"{prefix}-{service.id}", route)
+        route_id = f"{prefix}-{service.id}"
+        with self._lock:
+            self._routes[route_id] = route
+            try:
+                self._upsert_route(route_id, route)
+            except httpx.HTTPError as e:
+                logger.warning(
+                    "Caddy unreachable, route %s will be pushed on resync: %s",
+                    route_id,
+                    e,
+                )
 
     def unregister(self, service: Service):
         logger.debug("Unregistering service %s from CaddyBackend", service.id)
         prefix = "static" if service.source == "file" else "ephemeral"
-        self.client.delete(f"/id/{prefix}-{service.id}")
+        route_id = f"{prefix}-{service.id}"
+        with self._lock:
+            self._routes.pop(route_id, None)
+            try:
+                self.client.delete(f"/id/{route_id}")
+            except httpx.HTTPError as e:
+                logger.warning(
+                    "Caddy unreachable, route %s will be removed on resync: %s",
+                    route_id,
+                    e,
+                )
+
+    def resync(self):
+        """
+        Make Caddy's Harbor routes match the ones Harbor registered.
+        `caddy reload` and a Caddy restart load the Caddyfile, which drops every route pushed over the Admin API.
+        """
+        with self._lock:
+            try:
+                response = self.client.get(self.routes_path)
+                if response.status_code != 200:
+                    logger.warning(
+                        "Resync: cannot read Caddy routes: %s %s",
+                        response.status_code,
+                        response.text,
+                    )
+                    return
+                routes = response.json() or []
+                present = {r.get("@id") for r in routes if _is_harbor_route(r)}
+                for route_id in present - self._routes.keys():
+                    logger.info("Resync: removing stale route %s from Caddy", route_id)
+                    self.client.delete(f"/id/{route_id}")
+                missing = [rid for rid in self._routes if rid not in present]
+                if missing:
+                    logger.info(
+                        "Resync: Caddy lost %d route(s), pushing them again: %s",
+                        len(missing),
+                        missing,
+                    )
+                for route_id in missing:
+                    self._insert_route(route_id, self._routes[route_id])
+            except httpx.HTTPError as e:
+                logger.warning("Resync: Caddy unreachable: %s", e)
 
     def on_event(self, event: str, service: Service):
         if event == "registered":

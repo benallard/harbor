@@ -9,6 +9,8 @@ All notable changes to Harbor will be documented in this file.
 - added `spa` option to static routes: unknown paths without a file extension fall back to `index.html`, served with `Cache-Control: no-cache`
 - Caddy routes are ordered by prefix length, longest first, so overlapping routes such as `/app/api` and `/app` no longer depend on registration order (#3)
 - Caddy backend creates the server's routes list when it does not exist yet, instead of failing to insert the first route
+- Caddy routes survive `caddy reload` and Caddy restarts: Harbor checks every 10 seconds and pushes the routes Caddy lost again
+- Caddy backend no longer fails a registration while Caddy is unreachable; the route is pushed once Caddy is back
 
 
 ## [0.16.1] - 2026-05-07
