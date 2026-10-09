@@ -76,9 +76,11 @@ Delta xDS would be more efficient but adds significant complexity — deferred.
 ### Caddy admin API over unix socket
 The admin socket path is `unix:///run/caddy/admin.socket` by default.
 Socket permissions must be `0660` with the Caddy group — set via `|0660` in the Caddyfile.
-Routes are inserted at index 0 (not appended) so they take priority over the catch-all.
+Harbor routes are kept ahead of any other route (e.g. the catch-all), most specific prefix first.
+A new route is inserted before the first route that is not Harbor's or matches a prefix no longer than its own.
+This makes `/app/api` win over `/app` regardless of registration order, like the Flask router.
 Each route carries an `@id` tag (`static-<id>` or `ephemeral-<id>`) for targeted updates.
-Upsert logic: `GET /id/<route-id>` → 404 means `POST`, 200 means `PATCH`.
+Upsert logic: `GET /id/<route-id>` → 404 means insert at the computed index, 200 means `PATCH`, or delete and re-insert if the prefix changed.
 
 ### `harbor.wsgi:app` as Gunicorn entry point
 `harbor/__init__.py` exposes `app = create_app()` which conflicts with `harbor/app.py` module.

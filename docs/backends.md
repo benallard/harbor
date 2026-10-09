@@ -75,7 +75,7 @@ sudo usermod -aG caddy <harbor-user>
 
 ### Behavior
 
-- Routes are inserted at position 0 in the Caddy routes array, before the catch-all
+- Harbor routes are kept before the catch-all, ordered by prefix length, longest first, so `/app/api` wins over `/app` regardless of registration order
 - Each route is tagged with an `@id` for targeted updates and deletions
 - Static services use the prefix `static-<id>`, ephemeral services use `ephemeral-<id>`
 - Path prefix is stripped before forwarding when `strip_prefix: true` (default)
