@@ -130,10 +130,47 @@ def _render_proxy_route(service: Service) -> dict:
 
 
 def _render_static_route(service: Service) -> dict:
+    handlers = [{"handler": "rewrite", "strip_path_prefix": service.prefix}]
+    if service.spa:
+        handlers.append(_render_spa_fallback(service))
+    handlers.append({"handler": "file_server", "root": service.directory})
     return {
         "match": [{"path": [f"{service.prefix}*"]}],
-        "handle": [
-            {"handler": "rewrite", "strip_path_prefix": service.prefix},
-            {"handler": "file_server", "root": service.directory},
+        "handle": handlers,
+    }
+
+
+def _render_spa_fallback(service: Service) -> dict:
+    # Paths with a file extension are left alone, so a missing asset still returns 404.
+    not_found_without_extension = {
+        "not": [
+            {
+                "file": {
+                    "root": service.directory,
+                    "try_files": [
+                        "{http.request.uri.path}",
+                        "{http.request.uri.path}/index.html",
+                    ],
+                }
+            },
+            {"path_regexp": {"pattern": r"\.[^/]*$"}},
+        ]
+    }
+    return {
+        "handler": "subroute",
+        "routes": [
+            {
+                "match": [not_found_without_extension],
+                "handle": [{"handler": "rewrite", "uri": "/index.html"}],
+            },
+            {
+                "match": [{"path": ["/", "/index.html"]}],
+                "handle": [
+                    {
+                        "handler": "headers",
+                        "response": {"set": {"Cache-Control": ["no-cache"]}},
+                    }
+                ],
+            },
         ],
     }

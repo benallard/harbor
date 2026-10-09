@@ -121,10 +121,37 @@ directory: /srv/docs
 | `directory` | yes | Absolute path to the directory to serve |
 | `public` | no | Whether to include in the Gangway catalog (default: `true`) |
 | `icon` | no | URL or path to a service icon |
+| `spa` | no | Serve `index.html` for unknown paths, for single-page applications (default: `false`) |
 
 The served directory must be readable by the proxy process (e.g. the `caddy` user).
 Avoid serving from `/tmp` — systemd's `PrivateTmp` makes it invisible to other processes.
 Prefer `/srv/harbor/<service>/` or `/var/www/<service>/`.
+
+### Single-page applications
+
+A single-page application handles its routes in the browser.
+A reload or a deep link on such a route (e.g. `/snr/config`) asks for a file that does not exist.
+With `spa: true`, Harbor serves the directory's `index.html` instead of returning 404.
+
+```yaml
+id: snr
+name: SNR
+kind: static
+prefix: /snr
+directory: /srv/harbor/snr
+spa: true
+```
+
+The fallback only applies to paths without a file extension in their last segment.
+A missing asset such as `/snr/assets/index-old.js` still returns 404, rather than an HTML page the browser fails to run as a script.
+A client-side route whose last segment contains a dot (e.g. `/snr/user/john.doe`) is therefore not covered.
+
+`index.html` is served with `Cache-Control: no-cache`, so browsers pick up a new deployment.
+Other files keep their default caching.
+
+The application must load its assets with relative or runtime-derived URLs to work under a prefix.
+
+`spa` is supported by the Caddy and Flask backends.
 
 ---
 

@@ -28,6 +28,7 @@ class Service:
         None  # "http2" for gRPC upstreams, None defaults to http/1.1
     )
     strip_prefix: bool = True
+    spa: bool = False  # for "static" services: fall back to index.html
 
     def from_dict(data: dict, source: str) -> "Service":
         return Service(
@@ -49,6 +50,7 @@ class Service:
             abilities=data.get("abilities"),
             protocol=data.get("protocol"),
             strip_prefix=data.get("strip_prefix", True),
+            spa=data.get("spa", False),
         )
 
 
