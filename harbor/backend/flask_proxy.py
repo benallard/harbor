@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+import os
+
 import httpx
 
 from flask import request, Response, send_from_directory, abort
+from werkzeug.security import safe_join
 
 from .base import ProxyBackend
 from ..core.config import BackendConfig
@@ -68,6 +71,10 @@ class FlaskProxyBackend(ProxyBackend):
     def _serve_static(self, service, subpath):
         if not service.directory:
             abort(500)
+        if service.spa and _spa_fallback(service.directory, subpath):
+            response = send_from_directory(service.directory, "index.html")
+            response.headers["Cache-Control"] = "no-cache"
+            return response
         return send_from_directory(service.directory, subpath)
 
     def _proxy(self, service, subpath):
@@ -114,6 +121,16 @@ class FlaskProxyBackend(ProxyBackend):
     @property
     def listener_url(self) -> str:
         return f"127.0.0.1:{self.config.listener_port}"
+
+
+def _spa_fallback(directory, subpath):
+    # Paths with a file extension are left alone, so a missing asset still returns 404.
+    if subpath in ("", "index.html"):
+        return True
+    path = safe_join(directory, subpath)
+    if path is not None and os.path.isfile(path):
+        return False
+    return "." not in subpath.rstrip("/").rsplit("/", 1)[-1]
 
 
 class Router:

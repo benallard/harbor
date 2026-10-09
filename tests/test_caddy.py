@@ -84,6 +84,69 @@ def test_register_static_service(backend, httpx_mock: HTTPXMock):
     assert body["handle"][1]["root"] == "/srv/test"
 
 
+def test_register_static_service_without_spa_has_no_fallback(
+    backend, httpx_mock: HTTPXMock
+):
+    service = make_service("svc1", kind="static")
+
+    httpx_mock.add_response(
+        method="GET", url="http://localhost:2019/id/ephemeral-svc1", status_code=404
+    )
+    httpx_mock.add_response(
+        method="PUT",
+        url="http://localhost:2019/config/apps/http/servers/srv0/routes/0",
+        status_code=200,
+    )
+
+    backend.register(service)
+
+    body = json.loads(httpx_mock.get_requests()[1].content)
+    assert [h["handler"] for h in body["handle"]] == ["rewrite", "file_server"]
+
+
+def test_register_static_service_spa(backend, httpx_mock: HTTPXMock):
+    service = make_service("svc1", kind="static")
+    service.spa = True
+
+    httpx_mock.add_response(
+        method="GET", url="http://localhost:2019/id/ephemeral-svc1", status_code=404
+    )
+    httpx_mock.add_response(
+        method="PUT",
+        url="http://localhost:2019/config/apps/http/servers/srv0/routes/0",
+        status_code=200,
+    )
+
+    backend.register(service)
+
+    body = json.loads(httpx_mock.get_requests()[1].content)
+    assert [h["handler"] for h in body["handle"]] == [
+        "rewrite",
+        "subroute",
+        "file_server",
+    ]
+    fallback, cache = body["handle"][1]["routes"]
+    assert fallback["match"] == [
+        {
+            "not": [
+                {
+                    "file": {
+                        "root": "/srv/test",
+                        "try_files": [
+                            "{http.request.uri.path}",
+                            "{http.request.uri.path}/index.html",
+                        ],
+                    }
+                },
+                {"path_regexp": {"pattern": r"\.[^/]*$"}},
+            ]
+        }
+    ]
+    assert fallback["handle"] == [{"handler": "rewrite", "uri": "/index.html"}]
+    assert cache["match"] == [{"path": ["/", "/index.html"]}]
+    assert cache["handle"][0]["response"]["set"] == {"Cache-Control": ["no-cache"]}
+
+
 def test_unregister_service(backend, httpx_mock: HTTPXMock):
     service = make_service("svc1")
 

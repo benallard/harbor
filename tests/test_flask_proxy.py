@@ -56,3 +56,57 @@ def test_gateway_static(flask_client, tmp_path):
     )
     resp = flask_client.get("/tmp-static/hello.txt")
     assert resp.status_code == 200
+
+
+def _register_spa(flask_client, tmp_path):
+    (tmp_path / "index.html").write_text("<html>spa</html>")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app.js").write_text("console.log(1)")
+    flask_client.post(
+        "/services",
+        json={
+            "id": "spa",
+            "prefix": "/spa",
+            "kind": "static",
+            "directory": str(tmp_path),
+            "spa": True,
+            "ttl": 60,
+        },
+    )
+
+
+def test_gateway_static_spa_serves_existing_file(flask_client, tmp_path):
+    _register_spa(flask_client, tmp_path)
+    resp = flask_client.get("/spa/assets/app.js")
+    assert resp.status_code == 200
+    assert resp.data == b"console.log(1)"
+
+
+def test_gateway_static_spa_falls_back_to_index(flask_client, tmp_path):
+    _register_spa(flask_client, tmp_path)
+    resp = flask_client.get("/spa/config/general")
+    assert resp.status_code == 200
+    assert resp.data == b"<html>spa</html>"
+    assert resp.headers["Cache-Control"] == "no-cache"
+
+
+def test_gateway_static_spa_missing_asset_is_404(flask_client, tmp_path):
+    _register_spa(flask_client, tmp_path)
+    resp = flask_client.get("/spa/assets/index-old.js")
+    assert resp.status_code == 404
+
+
+def test_gateway_static_without_spa_does_not_fall_back(flask_client, tmp_path):
+    (tmp_path / "index.html").write_text("<html>spa</html>")
+    flask_client.post(
+        "/services",
+        json={
+            "id": "nospa",
+            "prefix": "/nospa",
+            "kind": "static",
+            "directory": str(tmp_path),
+            "ttl": 60,
+        },
+    )
+    resp = flask_client.get("/nospa/config/general")
+    assert resp.status_code == 404
