@@ -130,21 +130,21 @@ Prefer `/srv/harbor/<service>/` or `/var/www/<service>/`.
 ### Single-page applications
 
 A single-page application handles its routes in the browser.
-A reload or a deep link on such a route (e.g. `/snr/config`) asks for a file that does not exist.
+A reload or a deep link on such a route (e.g. `/app/config`) asks for a file that does not exist.
 With `spa: true`, Harbor serves the directory's `index.html` instead of returning 404.
 
 ```yaml
-id: snr
-name: SNR
+id: app
+name: My App
 kind: static
-prefix: /snr
-directory: /srv/harbor/snr
+prefix: /app
+directory: /srv/harbor/app
 spa: true
 ```
 
 The fallback only applies to paths without a file extension in their last segment.
-A missing asset such as `/snr/assets/index-old.js` still returns 404, rather than an HTML page the browser fails to run as a script.
-A client-side route whose last segment contains a dot (e.g. `/snr/user/john.doe`) is therefore not covered.
+A missing asset such as `/app/assets/index-old.js` still returns 404, rather than an HTML page the browser fails to run as a script.
+A client-side route whose last segment contains a dot (e.g. `/app/user/john.doe`) is therefore not covered.
 
 `index.html` is served with `Cache-Control: no-cache`, so browsers pick up a new deployment.
 Other files keep their default caching.
@@ -198,6 +198,13 @@ See [Sidecars](sidecars.md) for the full picture.
 
 Services can also be registered dynamically via Harbor's internal API with a TTL lease.
 See [Configuration](configuration.md) for the API reference.
+
+---
+
+## Overlapping prefixes
+
+Routes may share a prefix, e.g. a frontend on a static route `/app` and its API on a proxy route `/app/api`.
+The most specific prefix wins, regardless of the order in which the routes are loaded or registered.
 
 ---
 

@@ -7,6 +7,8 @@ All notable changes to Harbor will be documented in this file.
 - fixed `cds` and `lds` race condition by introducting a delayed rewrite
 - added `lds-reconcile-delay-ms` config key to controll the delay of the rewrite
 - added `spa` option to static routes: unknown paths without a file extension fall back to `index.html`, served with `Cache-Control: no-cache`
+- Caddy routes are ordered by prefix length, longest first, so overlapping routes such as `/app/api` and `/app` no longer depend on registration order (#3)
+- Caddy backend creates the server's routes list when it does not exist yet, instead of failing to insert the first route
 
 
 ## [0.16.1] - 2026-05-07

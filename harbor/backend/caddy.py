@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import httpx
 import logging
+import threading
 
 from typing import Optional
 
@@ -37,19 +38,45 @@ class CaddyBackend(ProxyBackend):
             self.client = httpx.Client(transport=transport, base_url="http://caddy")
         else:
             self.client = httpx.Client(base_url=admin_url)
+        self.routes_path = f"/config/apps/http/servers/{self.config.server_name}/routes"
+        self._lock = threading.Lock()
 
     def _upsert_route(self, route_id: str, route: dict):
         route["@id"] = route_id
-        response = self.client.get(f"/id/{route_id}")
-        if response.status_code == 404:
-            logger.debug("Creating new route %s for service %s", route_id, route)
-            self.client.put(
-                f"/config/apps/http/servers/{self.config.server_name}/routes/0",
-                json=route,
-            )
+        with self._lock:
+            response = self.client.get(f"/id/{route_id}")
+            if response.status_code != 404:
+                if _specificity(response.json()) == _specificity(route):
+                    logger.debug("Updating route %s for service %s", route_id, route)
+                    self.client.patch(f"/id/{route_id}", json=route)
+                    return
+                logger.debug("Moving route %s, its prefix changed", route_id)
+                self.client.delete(f"/id/{route_id}")
+            self._insert_route(route_id, route)
+
+    def _insert_route(self, route_id: str, route: dict):
+        # Keep Harbor routes ordered most specific first, ahead of any other route (e.g. the catch-all).
+        response = self.client.get(self.routes_path)
+        routes = response.json() if response.status_code == 200 else None
+        if routes is None:
+            logger.debug("Creating routes list with route %s: %s", route_id, route)
+            self.client.put(self.routes_path, json=[route])
+            return
+        specificity = _specificity(route)
+        index = next(
+            (
+                i
+                for i, existing in enumerate(routes)
+                if not _is_harbor_route(existing)
+                or _specificity(existing) <= specificity
+            ),
+            len(routes),
+        )
+        logger.debug("Creating new route %s at index %s: %s", route_id, index, route)
+        if index < len(routes):
+            self.client.put(f"{self.routes_path}/{index}", json=route)
         else:
-            logger.debug("Updating route %s for service %s", route_id, route)
-            self.client.patch(f"/id/{route_id}", json=route)
+            self.client.post(self.routes_path, json=route)
 
     def register(self, service: Service):
         logger.debug("Registering service %s with CaddyBackend", service.id)
@@ -78,6 +105,22 @@ class CaddyBackend(ProxyBackend):
     @property
     def listener_url(self) -> str:
         return f"127.0.0.1:{self.config.listener_port}"
+
+
+def _is_harbor_route(route: dict) -> bool:
+    return route.get("@id", "").startswith(("static-", "ephemeral-"))
+
+
+def _specificity(route: dict) -> int:
+    """Length of the longest literal path prefix the route matches."""
+    return max(
+        (
+            len(path.rstrip("*"))
+            for matcher in route.get("match", [])
+            for path in matcher.get("path", [])
+        ),
+        default=0,
+    )
 
 
 def render_route(service: Service) -> Optional[dict]:
