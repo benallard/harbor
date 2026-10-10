@@ -17,6 +17,12 @@ class ProxyBackend:
         """
         raise NotImplementedError
 
+    def resync(self):
+        """
+        Restore the proxy's configuration if it lost what Harbor pushed (e.g. after a proxy reload).
+        Called periodically. The default does nothing.
+        """
+
     @property
     def listener_url(self) -> str:
         """

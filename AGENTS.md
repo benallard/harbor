@@ -82,6 +82,12 @@ This makes `/app/api` win over `/app` regardless of registration order, like the
 Each route carries an `@id` tag (`static-<id>` or `ephemeral-<id>`) for targeted updates.
 Upsert logic: `GET /id/<route-id>` → 404 means insert at the computed index, 200 means `PATCH`, or delete and re-insert if the prefix changed.
 
+### Resync after a proxy reload
+`caddy reload` and a Caddy restart replace the whole config with the Caddyfile's, dropping every route Harbor pushed.
+Caddy does not tell anyone, so the Caddy backend keeps the routes it pushed and `resync()` compares them with Caddy's every 10 seconds (`tasks/resync.py`).
+Missing routes are inserted again, Harbor routes Harbor no longer knows are deleted.
+Restarting Harbor instead would also restore the routes, but would lose the ephemeral leases, which live in memory.
+
 ### `harbor.wsgi:app` as Gunicorn entry point
 `harbor/__init__.py` exposes `app = create_app()` which conflicts with `harbor/app.py` module.
 `harbor/wsgi.py` is the dedicated Gunicorn entry point to avoid this naming conflict.
@@ -169,6 +175,7 @@ harbor/
     factory.py     backend registry dict
   tasks/
     gc.py          GC thread factory
+    resync.py      thread calling ProxyBackend.resync periodically
     watcher.py     filesystem watcher for routes.d
   wsgi.py          Gunicorn entry point
   app.py           create_app, main, parse_args
