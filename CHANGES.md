@@ -4,6 +4,8 @@ All notable changes to Harbor will be documented in this file.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-12
+
 - fixed `cds` and `lds` race condition by introducting a delayed rewrite
 - added `lds-reconcile-delay-ms` config key to controll the delay of the rewrite
 - added `spa` option to static routes: unknown paths without a file extension fall back to `index.html`, served with `Cache-Control: no-cache`
