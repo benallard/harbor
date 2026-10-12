@@ -29,15 +29,20 @@ class HarborConfig:
     @staticmethod
     def from_file(path: str) -> "HarborConfig":
         data = yaml.safe_load(Path(path).read_text())
-        backends = {
-            name: BackendConfig(
-                kind=cfg["kind"],
-                url=cfg["url"],
-                options=cfg.get("options", {}),
-                features=cfg.get("features", []),
-            )
-            for name, cfg in data.get("backends", {}).items()
-        }
+        backends = _parse_backends(data)
+        backends_dir = Path(path).parent / data.get("backends_dir", "backends.d")
+        for fragment in sorted(backends_dir.glob("*.yaml")):
+            logger.info("Loading backends from %s", fragment)
+            for name, backend in _parse_backends(
+                yaml.safe_load(fragment.read_text()) or {}
+            ).items():
+                if name in backends:
+                    logger.warning(
+                        "Backend %s from %s replaces an earlier definition",
+                        name,
+                        fragment,
+                    )
+                backends[name] = backend
         return HarborConfig(
             static_dir=data.get("static_dir", "/etc/harbor/routes.d"),
             host=data.get("host", "0.0.0.0"),
@@ -70,6 +75,18 @@ class HarborConfig:
             ingress="default",
             backends=backends,
         )
+
+
+def _parse_backends(data: dict) -> Dict[str, BackendConfig]:
+    return {
+        name: BackendConfig(
+            kind=cfg["kind"],
+            url=cfg["url"],
+            options=cfg.get("options", {}),
+            features=cfg.get("features", []),
+        )
+        for name, cfg in (data.get("backends") or {}).items()
+    }
 
 
 def parse_args() -> argparse.Namespace:

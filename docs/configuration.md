@@ -21,6 +21,7 @@ static_dir: /etc/harbor/routes.d   # directory for .route files
 host: 0.0.0.0                      # host to bind on
 port: 8080                         # port to bind on
 ingress: caddy                     # name of the front-row backend
+backends_dir: backends.d           # more backends, relative to this file (default)
 
 backends:
   caddy:
@@ -61,6 +62,31 @@ Each backend entry supports:
 | `url` | no | Admin API URL or unix socket |
 | `options` | no | Backend-specific key-value options |
 | `features` | no | Capabilities this backend provides (e.g. `authz`, `transcoder`) |
+
+### `backends_dir`
+
+A directory of `*.yaml` files, each with a `backends` map in the same format as above.
+Their backends are added to the ones from the config file, so a package can add a backend without editing `harbor.yaml`.
+Defaults to `backends.d` next to the config file, e.g. `/etc/harbor/backends.d`; a missing directory is fine.
+A relative path is resolved against the directory of the config file.
+
+```yaml
+# /etc/harbor/backends.d/envoy.yaml
+backends:
+  envoy:
+    kind: envoy
+    url: /run/envoy
+    options:
+      listener-port: 10000
+    features:
+      - authz
+      - transcoder
+```
+
+Files are read in name order, after the config file.
+Files not ending in `.yaml`, such as `envoy.yaml.dpkg-new`, are ignored.
+A backend defined again replaces the earlier definition, and a warning is logged.
+The files are read at startup: restart Harbor after adding or removing one.
 
 ---
 

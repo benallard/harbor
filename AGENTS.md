@@ -120,6 +120,8 @@ CLI args > environment variables > config file > defaults.
 `harbor.yaml` is the recommended approach for multi-backend production deployments.
 Env vars (`HARBOR_BACKEND`, `HARBOR_BACKEND_URL`, etc.) cover simple single-backend setups.
 `argparse` defaults are set from env vars so both paths share the same defaults.
+Backends can also come from `*.yaml` files in `backends.d/` next to `harbor.yaml`, read after it in name order.
+This lets a package such as one installing Envoy add its backend without editing another package's `harbor.yaml`.
 
 ---
 
