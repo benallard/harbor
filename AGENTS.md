@@ -42,6 +42,11 @@ When a service requires a sidecar capability, the dispatcher:
 2. Sends the transformed service to the ingress backend (e.g. Caddy)
 3. Sends the original service to the delegate backend (e.g. Envoy)
 
+Delegation fails closed.
+A service whose sidecars are not all registered, or whose features no single backend supports, is withdrawn from every backend instead of being routed without them.
+Without this, a service declaring an `authz` sidecar on a host without Envoy would be published by the ingress without authorization.
+Registering or removing a sidecar dispatches the services that reference it again.
+
 ### One ingress
 Only one backend sits in the front row (`ingress` in `harbor.yaml`).
 All service events go to the ingress first.
