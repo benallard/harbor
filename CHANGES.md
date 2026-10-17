@@ -4,6 +4,8 @@ All notable changes to Harbor will be documented in this file.
 
 ## [Unreleased]
 
+- Backends can be added with `*.yaml` files in `backends.d/` next to the config file (or `backends_dir`), so a package can add a backend such as Envoy without editing `harbor.yaml`
+
 ## [0.17.0] - 2026-10-12
 
 - fixed `cds` and `lds` race condition by introducting a delayed rewrite
