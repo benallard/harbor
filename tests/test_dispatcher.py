@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 from harbor.core.dispatcher import Dispatcher
 from harbor.core.config import HarborConfig, BackendConfig
 from harbor.core.models import Service, Transcoder
+from harbor.core.registry import Registry
 
 
 def make_config(envoy_features=None):
@@ -236,7 +237,7 @@ def test_dispatch_transcoder_generates_rest_route(httpx_mock):
         kind="proxy",
         upstreams=["127.0.0.1:9090"],
         source="dynamic",
-        sidecars=["my-transcoder"],
+        sidecars=["my-bff"],
         transcoder=Transcoder(
             proto_descriptor="/etc/harbor/proto/svc.pb",
             services=["myservice.v1.MyService"],
@@ -270,7 +271,7 @@ def test_dispatch_transcoder_generates_grpc_passthrough_route():
         kind="proxy",
         upstreams=["127.0.0.1:9090"],
         source="dynamic",
-        sidecars=["my-transcoder"],
+        sidecars=["my-bff"],
         transcoder=Transcoder(
             proto_descriptor="/etc/harbor/proto/svc.pb",
             services=["myservice.v1.MyService"],
@@ -305,7 +306,7 @@ def test_dispatch_transcoder_envoy_receives_original():
         kind="proxy",
         upstreams=["127.0.0.1:9090"],
         source="dynamic",
-        sidecars=["my-transcoder"],
+        sidecars=["my-bff"],
         transcoder=Transcoder(
             proto_descriptor="/etc/harbor/proto/svc.pb",
             services=["myservice.v1.MyService"],
@@ -332,7 +333,7 @@ def test_dispatch_unregister_removes_all_ingress_routes():
         kind="proxy",
         upstreams=["127.0.0.1:9090"],
         source="dynamic",
-        sidecars=["my-transcoder"],
+        sidecars=["my-bff"],
         transcoder=Transcoder(
             proto_descriptor="/etc/harbor/proto/svc.pb",
             services=["myservice.v1.MyService", "myservice.v1.AnotherService"],
@@ -387,3 +388,135 @@ def test_dispatch_unregister_no_transcoder_removes_single_route():
     assert backends["caddy"].on_event.call_count == 1
     removed = backends["caddy"].on_event.call_args[0][1]
     assert removed.id == service.id
+
+
+# --- fail closed ---
+
+
+def test_dispatch_authz_without_capable_backend_is_not_routed():
+    config = make_config(envoy_features=[])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["authz"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = make_service(sidecars=["my-bff"])
+    dispatcher.dispatch("registered", service)
+
+    events = [c[0][0] for c in backends["caddy"].on_event.call_args_list]
+    assert events == ["unregistered"]
+    assert backends["caddy"].on_event.call_args[0][1].id == service.id
+
+
+def test_dispatch_missing_sidecar_is_not_routed():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[])
+
+    service = make_service(sidecars=["my-bff"])
+    dispatcher.dispatch("registered", service)
+
+    caddy_events = [c[0][0] for c in backends["caddy"].on_event.call_args_list]
+    envoy_events = [c[0][0] for c in backends["envoy"].on_event.call_args_list]
+    assert caddy_events == ["unregistered"]
+    assert envoy_events == ["unregistered"]
+
+
+def test_dispatch_partially_supported_features_is_not_routed():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    sidecars = [
+        make_sidecar(abilities=["authz"]),
+        Service(
+            id="my-limiter",
+            kind="sidecar",
+            upstreams=["127.0.0.1:9092"],
+            abilities=["ratelimit"],
+        ),
+    ]
+    dispatcher = make_dispatcher(config, backends, sidecars_for=sidecars)
+
+    service = make_service(sidecars=["my-bff", "my-limiter"])
+    dispatcher.dispatch("registered", service)
+
+    caddy_events = [c[0][0] for c in backends["caddy"].on_event.call_args_list]
+    assert caddy_events == ["unregistered"]
+    registered = [
+        c for c in backends["envoy"].on_event.call_args_list if c[0][0] == "registered"
+    ]
+    assert registered == []
+
+
+def test_dispatch_not_routed_withdraws_grpc_passthrough_routes():
+    config = make_config(envoy_features=[])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["transcoder"])
+    dispatcher = make_dispatcher(config, backends, sidecars_for=[sidecar])
+
+    service = Service(
+        id="svc1",
+        prefix="/api/myservice",
+        kind="proxy",
+        upstreams=["127.0.0.1:9090"],
+        source="dynamic",
+        sidecars=["my-bff"],
+        transcoder=Transcoder(
+            proto_descriptor="/etc/harbor/proto/svc.pb",
+            services=["myservice.v1.MyService"],
+        ),
+        protocol="http2",
+    )
+    dispatcher.dispatch("registered", service)
+
+    calls = backends["caddy"].on_event.call_args_list
+    assert {c[0][0] for c in calls} == {"unregistered"}
+    assert {c[0][1].id for c in calls} == {
+        "svc1",
+        "svc1-grpc-myservice-v1-MyService",
+    }
+
+
+def make_registry_dispatcher(config, backends, static):
+    registry = Registry({s.id: s for s in static})
+    dispatcher = Dispatcher(config, backends, registry)
+    registry.subscribe(dispatcher.dispatch)
+    return registry, dispatcher
+
+
+def test_sidecar_registered_later_routes_its_dependents():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    service = make_service(sidecars=["my-bff"])
+    registry, dispatcher = make_registry_dispatcher(config, backends, [service])
+
+    dispatcher.apply([service])
+    assert [c[0][0] for c in backends["caddy"].on_event.call_args_list] == [
+        "unregistered"
+    ]
+    backends["caddy"].reset_mock()
+
+    registry.add_static(make_sidecar(abilities=["authz"]))
+
+    caddy_call = backends["caddy"].on_event.call_args
+    assert caddy_call[0][0] == "registered"
+    assert caddy_call[0][1].upstreams == ["127.0.0.1:10000"]
+
+
+def test_sidecar_removed_withdraws_its_dependents():
+    config = make_config(envoy_features=["authz"])
+    backends = make_backends()
+    sidecar = make_sidecar(abilities=["authz"])
+    service = make_service(sidecars=["my-bff"])
+    registry, dispatcher = make_registry_dispatcher(
+        config, backends, [sidecar, service]
+    )
+    dispatcher.apply([sidecar, service])
+    backends["caddy"].reset_mock()
+    backends["envoy"].reset_mock()
+
+    registry.remove_static("my-bff")
+
+    caddy_calls = backends["caddy"].on_event.call_args_list
+    assert [(c[0][0], c[0][1].id) for c in caddy_calls] == [("unregistered", "svc1")]
+    assert ("unregistered", service) in [
+        c[0] for c in backends["envoy"].on_event.call_args_list
+    ]

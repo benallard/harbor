@@ -67,6 +67,23 @@ When Harbor registers `myapi`, it:
 
 ---
 
+## When a sidecar or feature is missing
+
+A service is never routed without the features its sidecars stand for.
+Harbor does not route it, and withdraws any route it had, when:
+
+- one of its `sidecars` is not registered, e.g. its `.route` file is not installed yet or was removed
+- no single backend declares all the abilities of its sidecars in its `features`
+
+Harbor logs an error naming the service and the reason.
+The ingress then answers requests under the service's prefix like any other unknown path.
+
+Registering or removing a sidecar dispatches the services that reference it again.
+A service whose sidecar arrives later is routed as soon as the sidecar is registered.
+A service whose sidecar is removed is withdrawn immediately.
+
+---
+
 ## Known abilities
 
 | Ability | Description | Typically handled by |

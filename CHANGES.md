@@ -5,6 +5,8 @@ All notable changes to Harbor will be documented in this file.
 ## [Unreleased]
 
 - Backends can be added with `*.yaml` files in `backends.d/` next to the config file (or `backends_dir`), so a package can add a backend such as Envoy without editing `harbor.yaml`
+- A service is no longer routed without the features its sidecars stand for: when a referenced sidecar is not registered, or no backend supports all of its features, Harbor withdraws it and logs an error instead of letting the ingress route it directly
+- Registering or removing a sidecar dispatches the services that reference it again, so they are routed once the sidecar arrives and withdrawn when it goes
 
 ## [0.17.0] - 2026-10-12
 
